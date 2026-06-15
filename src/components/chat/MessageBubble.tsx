@@ -16,11 +16,32 @@ interface MessageBubbleProps {
   showAvatar?: boolean
 }
 
+const InstagramErrorIcon = ({ className }: { className?: string }) => (
+  <svg
+    aria-hidden="true"
+    viewBox="0 0 24 24"
+    className={className}
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M12 2.75C17.11 2.75 21.25 6.89 21.25 12S17.11 21.25 12 21.25 2.75 17.11 2.75 12 6.89 2.75 12 2.75Z"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path d="M12.2 7.85V12.55" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+    <circle cx="12.2" cy="16.15" r="1.05" fill="currentColor" />
+  </svg>
+)
+
 const statusIcon = (status: Message["status"], className?: string) => {
   const iconClass = cn("h-3.5 w-3.5", className)
   if (status === "read") return <CheckCheck className={iconClass} />
   if (status === "delivered") return <CheckCheck className={cn(iconClass, "opacity-70")} />
-  return <Check className={cn(iconClass, "opacity-70")} />
+  if (status === "sent") return <Check className={cn(iconClass, "opacity-70")} />
+  return null
 }
 
 export const MessageBubble = ({
@@ -37,6 +58,8 @@ export const MessageBubble = ({
   const isMessenger = layout.id === "messenger"
   const isInstagram = layout.id === "instagram"
   const isTinder = layout.id === "tinder"
+  const isError = message.status === "error"
+  const showInstagramError = isInstagram && isOwn && isError
   const showMessengerAvatar = isMessenger && !isOwn && Boolean(showAvatar)
   const showInstagramAvatar = isInstagram && !isOwn && Boolean(showAvatar)
   const avatarFallback = (sender?.name || "??").slice(0, 2).toUpperCase()
@@ -153,13 +176,13 @@ export const MessageBubble = ({
       </div>
     )
   ) : null
-  const bubbleContent = (
+  const bubbleBody = (
     <div
       className={cn(
         "text-sm shadow-sm",
         message.type === "image" ? "p-1" : "px-3 py-2",
         bubbleRadius,
-        bubbleAlignmentClass,
+        !showInstagramError && bubbleAlignmentClass,
         instagramIndentClass,
         messengerIndentClass,
         isWhatsApp
@@ -232,6 +255,20 @@ export const MessageBubble = ({
         </div>
       ) : null}
     </div>
+  )
+
+  const bubbleContent = showInstagramError ? (
+    <div className="ml-auto flex flex-col gap-1">
+      <div className="flex items-center justify-end gap-2">
+        {bubbleBody}
+        <InstagramErrorIcon className="h-[1.55rem] w-[1.55rem] shrink-0 text-[#ed4956]" />
+      </div>
+      <span className="pr-6 text-right text-[0.72rem] font-medium text-[#ed4956]">
+        Not delivered.
+      </span>
+    </div>
+  ) : (
+    bubbleBody
   )
 
   return (

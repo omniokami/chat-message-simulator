@@ -1,5 +1,5 @@
 export type MessageType = "text" | "system" | "image"
-export type MessageStatus = "sent" | "delivered" | "read"
+export type MessageStatus = "sent" | "delivered" | "read" | "error"
 
 export interface Message {
   id: string
