@@ -6,10 +6,12 @@ import {
   Image,
   MessagesSquare,
   Minus,
+  Moon,
   Plus,
   ScreenShare,
   SlidersHorizontal,
   SquareStack,
+  Sun,
   Users,
 } from "lucide-react"
 import { layoutConfigs } from "@/constants/layouts"
@@ -56,6 +58,7 @@ export const MainLayout = () => {
   const conversation = useConversationStore((state) => state.conversation)
   const layoutId = useConversationStore((state) => state.layoutId)
   const themeId = useConversationStore((state) => state.themeId)
+  const editorTheme = useConversationStore((state) => state.editorTheme)
   const activeParticipantId = useConversationStore((state) => state.activeParticipantId)
   const backgroundImageUrl = useConversationStore((state) => state.backgroundImageUrl)
   const backgroundImageOpacity = useConversationStore((state) => state.backgroundImageOpacity)
@@ -66,6 +69,7 @@ export const MainLayout = () => {
   const exportSettings = useConversationStore((state) => state.exportSettings)
   const setExportSettings = useConversationStore((state) => state.setExportSettings)
   const setTheme = useConversationStore((state) => state.setTheme)
+  const setEditorTheme = useConversationStore((state) => state.setEditorTheme)
   const [isQuickExporting, setIsQuickExporting] = useState(false)
   const [quickPreviewUrls, setQuickPreviewUrls] = useState<string[]>([])
   const [quickPreviewError, setQuickPreviewError] = useState<string | null>(null)
@@ -134,6 +138,12 @@ export const MainLayout = () => {
   )
   const hasDark = layout.themes.some((themeEntry) => themeEntry.id === "dark")
   const isDark = themeId === "dark"
+  const isEditorDark = editorTheme === "dark"
+
+  useEffect(() => {
+    if (typeof document === "undefined") return
+    document.documentElement.dataset.editorTheme = editorTheme
+  }, [editorTheme])
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -350,7 +360,14 @@ export const MainLayout = () => {
   const quickPresets: SizePreset[] = sizePresets.filter((preset) => quickPresetIds.has(preset.id))
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.16),_transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(14,165,233,0.12),_transparent_26%),linear-gradient(180deg,#0b1220_0%,#111827_45%,#0a0f1a_100%)] text-[hsl(var(--foreground))]">
+    <div
+      className={cn(
+        "min-h-screen text-[hsl(var(--foreground))]",
+        isEditorDark
+          ? "bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.16),_transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(14,165,233,0.12),_transparent_26%),linear-gradient(180deg,#0b1220_0%,#111827_45%,#0a0f1a_100%)]"
+          : "bg-[radial-gradient(circle_at_top,_rgba(125,211,252,0.28),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(191,219,254,0.35),_transparent_28%),linear-gradient(180deg,#f8fbff_0%,#f8fafc_45%,#e8eef7_100%)]",
+      )}
+    >
       <div className="mx-auto flex flex-col gap-6 px-4 pt-6 pb-24 lg:pb-6">
         <Toolbar />
 
@@ -763,6 +780,39 @@ export const MainLayout = () => {
         </div>
 
         <div className="flex flex-wrap items-center justify-center gap-3">
+          <div className="flex items-center gap-3 rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--card))]/85 px-4 py-2 shadow-sm backdrop-blur">
+            <div className="flex items-center gap-2 text-xs">
+              <Sun
+                className={cn(
+                  "h-4 w-4 transition-colors",
+                  isEditorDark
+                    ? "text-[hsl(var(--muted-foreground))]"
+                    : "text-[hsl(var(--foreground))]",
+                )}
+              />
+              <span className="font-medium text-[hsl(var(--muted-foreground))]">
+                Workspace theme
+              </span>
+            </div>
+            <Switch
+              checked={isEditorDark}
+              onCheckedChange={(checked) => setEditorTheme(checked ? "dark" : "light")}
+              aria-label="Toggle workspace theme"
+            />
+            <div className="flex items-center gap-2 text-xs">
+              <Moon
+                className={cn(
+                  "h-4 w-4 transition-colors",
+                  isEditorDark
+                    ? "text-[hsl(var(--foreground))]"
+                    : "text-[hsl(var(--muted-foreground))]",
+                )}
+              />
+              <span className="font-medium text-[hsl(var(--muted-foreground))]">
+                {isEditorDark ? "Dark" : "Light"}
+              </span>
+            </div>
+          </div>
           <Button variant="ghost" size="sm" asChild>
             <a
               href="https://github.com/quead/chat-message-simulator"

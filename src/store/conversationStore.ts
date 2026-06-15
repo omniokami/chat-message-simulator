@@ -28,6 +28,8 @@ export interface UiState {
   autoFit: boolean
 }
 
+export type EditorTheme = "light" | "dark"
+
 type Snapshot = {
   conversation: Conversation
   layoutId: LayoutId
@@ -48,6 +50,7 @@ interface ConversationStore {
   conversation: Conversation
   layoutId: LayoutId
   themeId: ThemeId
+  editorTheme: EditorTheme
   activeParticipantId: string
   backgroundImageUrl: string
   backgroundImageOpacity: number
@@ -58,6 +61,7 @@ interface ConversationStore {
   lastAutosaveAt: number | null
   setLayout: (layoutId: LayoutId) => void
   setTheme: (themeId: ThemeId) => void
+  setEditorTheme: (theme: EditorTheme) => void
   setActiveParticipant: (participantId: string) => void
   setBackgroundImageUrl: (url: string) => void
   setBackgroundImageOpacity: (opacity: number) => void
@@ -290,6 +294,7 @@ export const useConversationStore = create<ConversationStore>()(
       conversation: buildDefaultConversation(),
       layoutId: defaultLayoutId,
       themeId: "light",
+      editorTheme: "light",
       activeParticipantId: defaultParticipants[0].id,
       backgroundImageUrl: "",
       backgroundImageOpacity: 0.35,
@@ -300,6 +305,7 @@ export const useConversationStore = create<ConversationStore>()(
       lastAutosaveAt: null,
       setLayout: (layoutId) => set((state) => ({ layoutId, history: pushHistory(state) })),
       setTheme: (themeId) => set((state) => ({ themeId, history: pushHistory(state) })),
+      setEditorTheme: (editorTheme) => set({ editorTheme }),
       setActiveParticipant: (participantId) =>
         set((state) => ({ activeParticipantId: participantId, history: pushHistory(state) })),
       setBackgroundImageUrl: (url) =>
@@ -480,6 +486,7 @@ export const useConversationStore = create<ConversationStore>()(
           activeParticipantId: defaultParticipants[0].id,
           layoutId: defaultLayoutId,
           themeId: "light",
+          editorTheme: state.editorTheme,
           backgroundImageUrl: "",
           backgroundImageOpacity: 0.35,
           backgroundColor: "",
@@ -575,6 +582,7 @@ export const useConversationStore = create<ConversationStore>()(
         const typed = state as ConversationStore
         return {
           ...typed,
+          editorTheme: typed.editorTheme === "dark" ? "dark" : "light",
           conversation: {
             ...typed.conversation,
             participants: normalizeParticipants(typed.conversation.participants),
@@ -589,6 +597,7 @@ export const useConversationStore = create<ConversationStore>()(
         conversation: state.conversation,
         layoutId: state.layoutId,
         themeId: state.themeId,
+        editorTheme: state.editorTheme,
         activeParticipantId: state.activeParticipantId,
         backgroundImageUrl: state.backgroundImageUrl,
         backgroundImageOpacity: state.backgroundImageOpacity,
