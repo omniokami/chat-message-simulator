@@ -35,8 +35,8 @@ export const SettingsPanel = () => {
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="text-sm font-semibold text-slate-900">Appearance & Preview</h3>
-        <p className="text-xs text-slate-500">Control layout, theme, and preview behavior.</p>
+        <h3 className="text-sm font-semibold text-[hsl(var(--foreground))]">Appearance & Preview</h3>
+        <p className="text-xs text-[hsl(var(--muted-foreground))]">Control layout, theme, and preview behavior.</p>
       </div>
 
       <div className="space-y-2">
@@ -53,16 +53,16 @@ export const SettingsPanel = () => {
             placeholder="Enter group name"
           />
         ) : (
-          <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">
+          <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-3 py-2 text-sm text-[hsl(var(--muted-foreground))]">
             {title}
           </div>
         )}
       </div>
 
-      <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2">
+      <div className="flex items-center justify-between rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2">
         <div>
-          <div className="text-sm font-medium text-slate-900">Theme</div>
-          <div className="text-xs text-slate-500">Switch between light and dark.</div>
+          <div className="text-sm font-medium text-[hsl(var(--foreground))]">Theme</div>
+          <div className="text-xs text-[hsl(var(--muted-foreground))]">Switch between light and dark.</div>
         </div>
         <Switch
           checked={isDark}
@@ -71,10 +71,10 @@ export const SettingsPanel = () => {
         />
       </div>
 
-      <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2">
+      <div className="flex items-center justify-between rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2">
         <div>
-          <div className="text-sm font-medium text-slate-900">Chrome</div>
-          <div className="text-xs text-slate-500">Show header and input bar.</div>
+          <div className="text-sm font-medium text-[hsl(var(--foreground))]">Chrome</div>
+          <div className="text-xs text-[hsl(var(--muted-foreground))]">Show header and input bar.</div>
         </div>
         <Switch checked={ui.showChrome} onCheckedChange={(value) => setUi({ showChrome: value })} />
       </div>
@@ -105,23 +105,23 @@ export const SettingsPanel = () => {
         </div>
       </div>
 
-      <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2">
+      <div className="flex items-center justify-between rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2">
         <div>
-          <div className="text-sm font-medium text-slate-900">Auto-fit preview</div>
-          <div className="text-xs text-slate-500">Scale to fit the preview panel.</div>
+          <div className="text-sm font-medium text-[hsl(var(--foreground))]">Auto-fit preview</div>
+          <div className="text-xs text-[hsl(var(--muted-foreground))]">Scale to fit the preview panel.</div>
         </div>
         <Switch checked={ui.autoFit} onCheckedChange={(value) => setUi({ autoFit: value })} />
       </div>
 
       <div className="space-y-2">
         <Label>Background image</Label>
-        <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-3">
+        <div className="space-y-3 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-3">
           <div className="grid gap-3 sm:grid-cols-[120px_1fr]">
-            <div className="h-24 w-full overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+            <div className="h-24 w-full overflow-hidden rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))]">
               {backgroundImageUrl ? (
                 <img src={backgroundImageUrl} alt="Background preview" className="h-full w-full object-cover" />
               ) : (
-                <div className="flex h-full flex-col items-center justify-center gap-1 text-xs text-slate-400">
+                <div className="flex h-full flex-col items-center justify-center gap-1 text-xs text-[hsl(var(--muted-foreground))]">
                   <ImagePlus className="h-4 w-4" />
                   No image
                 </div>
@@ -134,7 +134,7 @@ export const SettingsPanel = () => {
                   Upload image
                 </label>
               </Button>
-              <div className="flex items-center justify-between text-xs text-slate-500">
+              <div className="flex items-center justify-between text-xs text-[hsl(var(--muted-foreground))]">
                 <span>Uploads only (best for exports)</span>
                 <Button
                   variant="ghost"
@@ -196,10 +196,10 @@ export const SettingsPanel = () => {
 
       <div className="space-y-2">
         <Label>Background color</Label>
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3">
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-3">
           <div className="flex items-center gap-2">
-            <PaintBucket className="h-4 w-4 text-slate-500" />
-            <span className="text-xs text-slate-500">Fill</span>
+            <PaintBucket className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
+            <span className="text-xs text-[hsl(var(--muted-foreground))]">Fill</span>
           </div>
           <Input
             type="color"

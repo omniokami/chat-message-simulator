@@ -350,7 +350,7 @@ export const MainLayout = () => {
   const quickPresets: SizePreset[] = sizePresets.filter((preset) => quickPresetIds.has(preset.id))
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-white to-slate-200">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.16),_transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(14,165,233,0.12),_transparent_26%),linear-gradient(180deg,#0b1220_0%,#111827_45%,#0a0f1a_100%)] text-[hsl(var(--foreground))]">
       <div className="mx-auto flex flex-col gap-6 px-4 pt-6 pb-24 lg:pb-6">
         <Toolbar />
 
@@ -358,13 +358,13 @@ export const MainLayout = () => {
           <CardContent className="space-y-3 py-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                <div className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
                   Workflow
                 </div>
-                <div className="text-sm font-semibold text-slate-900">
+                <div className="text-sm font-semibold text-[hsl(var(--foreground))]">
                   Step {resolvedActivePanelIndex + 1} of {panelTabs.length}: {activePanel.label}
                 </div>
-                <p className="text-xs text-slate-500">{activePanel.description}</p>
+                <p className="text-xs text-[hsl(var(--muted-foreground))]">{activePanel.description}</p>
               </div>
             </div>
             <div className="grid gap-2 sm:grid-cols-4">
@@ -381,14 +381,16 @@ export const MainLayout = () => {
                     className={cn(
                       "flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left text-sm transition",
                       isActive
-                        ? "border-slate-900 bg-slate-900 text-white shadow-sm"
-                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50",
+                        ? "border-[hsl(var(--primary))] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm"
+                        : "border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))]",
                     )}
                   >
                     <span
                       className={cn(
                         "flex h-7 w-7 items-center justify-center rounded-lg text-xs font-semibold",
-                        isActive ? "bg-white/15 text-white" : "bg-slate-100 text-slate-500",
+                        isActive
+                          ? "bg-black/10 text-[hsl(var(--primary-foreground))]"
+                          : "bg-[hsl(var(--accent))] text-[hsl(var(--muted-foreground))]",
                       )}
                     >
                       <Icon className="h-4 w-4" />
@@ -432,8 +434,8 @@ export const MainLayout = () => {
               <CardHeader className="space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <div className="text-sm font-semibold text-slate-900">Preview canvas</div>
-                    <p className="text-xs text-slate-500">Live view of your layout and message flow.</p>
+                    <div className="text-sm font-semibold text-[hsl(var(--foreground))]">Preview canvas</div>
+                    <p className="text-xs text-[hsl(var(--muted-foreground))]">Live view of your layout and message flow.</p>
                   </div>
                   <div className="flex w-full items-center gap-2 overflow-x-auto pb-1 sm:w-auto sm:flex-wrap">
                     <Button
@@ -468,7 +470,7 @@ export const MainLayout = () => {
                     </Button>
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-[hsl(var(--muted-foreground))]">
                   <SquareStack className="h-4 w-4" />
                   Zoom {Math.round(appliedScale * 100)}%
                   {ui.autoFit ? " (auto-fit)" : ""} - Export size {exportSettings.width} x{" "}
@@ -476,12 +478,12 @@ export const MainLayout = () => {
                   {exportSettings.captureMode === "full" ? " - all messages" : ""}
                 </div>
                 {conversationMetrics.hasOverflow ? (
-                  <div className="flex flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-950 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex flex-col gap-3 rounded-2xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-xs text-amber-100 sm:flex-row sm:items-center sm:justify-between">
                     <div className="space-y-1">
                       <div className="font-semibold">
                         Long conversation detected: {visibleMessageCount} visible messages
                       </div>
-                      <p className="text-amber-900/80">
+                      <p className="text-amber-100/80">
                         Scroll inside the phone preview to browse the thread, or jump directly to
                         the start or latest message.
                       </p>
@@ -508,7 +510,7 @@ export const MainLayout = () => {
               <CardContent>
                 <div
                   ref={previewContainerRef}
-                  className="flex h-[60vh] items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-4 lg:h-[70vh]"
+                  className="flex h-[60vh] items-center justify-center rounded-3xl border border-dashed border-[hsl(var(--border))] bg-[hsl(var(--muted))] p-4 lg:h-[70vh]"
                 >
                   <div
                     ref={previewScrollRef}
@@ -553,23 +555,23 @@ export const MainLayout = () => {
                     </div>
                   </div>
                 </div>
-                <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="space-y-2">
-                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
                       Layout
                     </div>
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                       <div className="w-full sm:w-auto">
                         <LayoutSelector />
                       </div>
-                      <div className="flex items-center justify-between gap-2 rounded-full bg-slate-100 px-3 py-1 sm:justify-start">
-                        <span className="text-xs font-semibold text-slate-600">Theme</span>
+                      <div className="flex items-center justify-between gap-2 rounded-full bg-[hsl(var(--secondary))] px-3 py-1 sm:justify-start">
+                        <span className="text-xs font-semibold text-[hsl(var(--foreground))]">Theme</span>
                         <Switch
                           checked={isDark}
                           onCheckedChange={(value) => setTheme(value && hasDark ? "dark" : "light")}
                           disabled={!hasDark}
                         />
-                        <span className="text-xs text-slate-500">{isDark ? "Dark" : "Light"}</span>
+                        <span className="text-xs text-[hsl(var(--muted-foreground))]">{isDark ? "Dark" : "Light"}</span>
                       </div>
                     </div>
                   </div>
@@ -583,9 +585,9 @@ export const MainLayout = () => {
                     More settings
                   </Button>
                 </div>
-                <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="space-y-3">
-                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
                       Quick download
                     </div>
                     <div className="-mx-1 flex flex-nowrap gap-2 overflow-x-auto px-1 pb-1 sm:flex-wrap sm:overflow-visible sm:px-0">
@@ -607,7 +609,7 @@ export const MainLayout = () => {
                       ))}
                     </div>
                     <div className="space-y-2">
-                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
                         Capture
                       </div>
                       <div className="flex flex-wrap gap-2">
@@ -633,7 +635,7 @@ export const MainLayout = () => {
                           {screenCount} screens
                         </Button>
                       </div>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-[hsl(var(--muted-foreground))]">
                         {exportSettings.captureMode === "full"
                           ? `Exports every visible message in a ${exportSettings.width} x ${resolvedExportHeight}px image.`
                           : exportSettings.captureMode === "screens"
@@ -700,17 +702,17 @@ export const MainLayout = () => {
                       </DialogDescription>
                     </DialogHeader>
                     {isQuickPreviewing ? (
-                      <div className="text-sm text-slate-500">Rendering preview...</div>
+                      <div className="text-sm text-[hsl(var(--muted-foreground))]">Rendering preview...</div>
                     ) : null}
                     {quickPreviewError ? (
-                      <div className="text-sm text-red-600">Export failed: {quickPreviewError}</div>
+                      <div className="text-sm text-red-300">Export failed: {quickPreviewError}</div>
                     ) : null}
                     {quickPreviewUrls.length ? (
                       <div className="space-y-3">
                         {quickPreviewUrls.map((quickPreviewUrl, index) => (
                           <div key={quickPreviewUrl} className="space-y-2">
                             {quickPreviewUrls.length > 1 ? (
-                              <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                              <div className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
                                 Screen {index + 1}
                               </div>
                             ) : null}
@@ -721,11 +723,11 @@ export const MainLayout = () => {
                                   ? `Quick export preview screen ${index + 1}`
                                   : "Quick export preview"
                               }
-                              className="max-h-[70vh] w-full rounded-xl border border-slate-200 bg-slate-50 object-contain"
+                              className="max-h-[70vh] w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))] object-contain"
                             />
                           </div>
                         ))}
-                        <div className="text-xs text-slate-500">
+                        <div className="text-xs text-[hsl(var(--muted-foreground))]">
                           {quickPreviewUrls.length > 1
                             ? "Download saves one file per screen in order."
                             : "Right click the image to save."}
@@ -782,18 +784,18 @@ export const MainLayout = () => {
                 <DialogDescription>
                   By using this app, you agree to these terms.
                 </DialogDescription>
-                <div className="text-xs text-slate-500">Last updated: 2026-01-03 | Version: 2026-01-03</div>
+                <div className="text-xs text-[hsl(var(--muted-foreground))]">Last updated: 2026-01-03 | Version: 2026-01-03</div>
               </DialogHeader>
-              <div className="space-y-4 text-sm text-slate-600">
+              <div className="space-y-4 text-sm text-[hsl(var(--muted-foreground))]">
                 <div className="space-y-2">
-                  <div className="text-sm font-semibold text-slate-900">What this app does</div>
+                  <div className="text-sm font-semibold text-[hsl(var(--foreground))]">What this app does</div>
                   <p>
                     This app lets you compose chat mockups, preview layouts, and export images.
                     All processing happens in your browser.
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <div className="text-sm font-semibold text-slate-900">Data handling and GDPR</div>
+                  <div className="text-sm font-semibold text-[hsl(var(--foreground))]">Data handling and GDPR</div>
                   <p>
                     We do not collect, store, or process personal data on our servers. Your edits
                     and autosaves stay in your browser&apos;s local storage. You can delete them
@@ -806,7 +808,7 @@ export const MainLayout = () => {
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <div className="text-sm font-semibold text-slate-900">Third-party resources</div>
+                  <div className="text-sm font-semibold text-[hsl(var(--foreground))]">Third-party resources</div>
                   <p>
                     The app may load fonts or user-provided remote images from third-party
                     providers. Those providers may receive standard request data such as IP
@@ -815,7 +817,7 @@ export const MainLayout = () => {
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <div className="text-sm font-semibold text-slate-900">Your content</div>
+                  <div className="text-sm font-semibold text-[hsl(var(--foreground))]">Your content</div>
                   <p>
                     You are responsible for the content you enter and export. Do not include
                     sensitive data unless you are comfortable storing it locally. Only use content
@@ -823,7 +825,7 @@ export const MainLayout = () => {
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <div className="text-sm font-semibold text-slate-900">No warranties</div>
+                  <div className="text-sm font-semibold text-[hsl(var(--foreground))]">No warranties</div>
                   <p>
                     The app is provided &quot;as is&quot; and &quot;as available&quot; without any
                     warranties, express or implied, including accuracy, reliability, availability,
@@ -831,7 +833,7 @@ export const MainLayout = () => {
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <div className="text-sm font-semibold text-slate-900">Limitation of liability</div>
+                  <div className="text-sm font-semibold text-[hsl(var(--foreground))]">Limitation of liability</div>
                   <p>
                     To the maximum extent permitted by law, we are not liable for any indirect,
                     incidental, special, consequential, or punitive damages, or any loss of data,
@@ -840,20 +842,20 @@ export const MainLayout = () => {
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <div className="text-sm font-semibold text-slate-900">Governing law</div>
+                  <div className="text-sm font-semibold text-[hsl(var(--foreground))]">Governing law</div>
                   <p>
                     These terms are governed by the laws of Romania. Any disputes are subject to
                     the exclusive jurisdiction of the courts in Romania.
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <div className="text-sm font-semibold text-slate-900">Contact</div>
+                  <div className="text-sm font-semibold text-[hsl(var(--foreground))]">Contact</div>
                   <p>
                     Questions about these terms or GDPR? Email: queadx@gmail.com
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <div className="text-sm font-semibold text-slate-900">Changes</div>
+                  <div className="text-sm font-semibold text-[hsl(var(--foreground))]">Changes</div>
                   <p>
                     We may update these terms from time to time. Continued use means you accept
                     the updated terms.
@@ -875,25 +877,25 @@ export const MainLayout = () => {
                 <DialogDescription>
                   This policy explains how data is handled in the app.
                 </DialogDescription>
-                <div className="text-xs text-slate-500">Last updated: 2026-01-03 | Version: 2026-01-03</div>
+                <div className="text-xs text-[hsl(var(--muted-foreground))]">Last updated: 2026-01-03 | Version: 2026-01-03</div>
               </DialogHeader>
-              <div className="space-y-4 text-sm text-slate-600">
+              <div className="space-y-4 text-sm text-[hsl(var(--muted-foreground))]">
                 <div className="space-y-2">
-                  <div className="text-sm font-semibold text-slate-900">Data we collect</div>
+                  <div className="text-sm font-semibold text-[hsl(var(--foreground))]">Data we collect</div>
                   <p>
                     We do not collect or store your chat content on our servers. Everything you
                     create stays on your device.
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <div className="text-sm font-semibold text-slate-900">Local storage</div>
+                  <div className="text-sm font-semibold text-[hsl(var(--foreground))]">Local storage</div>
                   <p>
                     The app uses your browser&apos;s local storage to keep autosaves and settings.
                     You can remove this data with Clear or by clearing site data in your browser.
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <div className="text-sm font-semibold text-slate-900">Third-party requests</div>
+                  <div className="text-sm font-semibold text-[hsl(var(--foreground))]">Third-party requests</div>
                   <p>
                     Fonts and user-provided remote images may be loaded from third-party services.
                     Those providers may receive standard request data such as IP address and user
@@ -901,7 +903,7 @@ export const MainLayout = () => {
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <div className="text-sm font-semibold text-slate-900">GDPR readiness</div>
+                  <div className="text-sm font-semibold text-[hsl(var(--foreground))]">GDPR readiness</div>
                   <p>
                     Because your content does not leave your device, there is no server-side
                     processing of personal data for the app. If you contact us, we only use your
@@ -909,13 +911,13 @@ export const MainLayout = () => {
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <div className="text-sm font-semibold text-slate-900">Contact</div>
+                  <div className="text-sm font-semibold text-[hsl(var(--foreground))]">Contact</div>
                   <p>
                     Privacy questions? Email: queadx@gmail.com
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <div className="text-sm font-semibold text-slate-900">Changes</div>
+                  <div className="text-sm font-semibold text-[hsl(var(--foreground))]">Changes</div>
                   <p>
                     We may update this policy from time to time. Continued use means you accept
                     the updated policy.
@@ -927,7 +929,7 @@ export const MainLayout = () => {
         </div>
       </div>
       <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 lg:hidden">
-        <div className="rounded-[1.4rem] border border-white/70 bg-white/90 p-1 shadow-lg backdrop-blur">
+        <div className="rounded-[1.4rem] border border-[hsl(var(--border))] bg-[hsl(var(--card))]/90 p-1 shadow-lg backdrop-blur">
           <div
             role="tablist"
             aria-label="Mobile view mode"
@@ -936,7 +938,7 @@ export const MainLayout = () => {
             <div
               aria-hidden="true"
               className={cn(
-                "absolute inset-y-0 left-0 w-1/2 rounded-[1.1rem] bg-slate-900 shadow-sm transition-transform duration-200 ease-out",
+                "absolute inset-y-0 left-0 w-1/2 rounded-[1.1rem] bg-[hsl(var(--primary))] shadow-sm transition-transform duration-200 ease-out",
                 ui.activeView === "preview" && "translate-x-full",
               )}
             />
@@ -946,7 +948,9 @@ export const MainLayout = () => {
               aria-selected={ui.activeView === "editor"}
               className={cn(
                 "relative z-10 rounded-[1.1rem] px-5 py-2 text-sm font-semibold transition-colors",
-                ui.activeView === "editor" ? "text-white" : "text-slate-500",
+                ui.activeView === "editor"
+                  ? "text-[hsl(var(--primary-foreground))]"
+                  : "text-[hsl(var(--muted-foreground))]",
               )}
               onClick={() =>
                 setUi({
@@ -963,7 +967,9 @@ export const MainLayout = () => {
               aria-selected={ui.activeView === "preview"}
               className={cn(
                 "relative z-10 rounded-[1.1rem] px-5 py-2 text-sm font-semibold transition-colors",
-                ui.activeView === "preview" ? "text-white" : "text-slate-500",
+                ui.activeView === "preview"
+                  ? "text-[hsl(var(--primary-foreground))]"
+                  : "text-[hsl(var(--muted-foreground))]",
               )}
               onClick={() =>
                 setUi({

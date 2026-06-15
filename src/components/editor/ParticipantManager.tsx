@@ -75,21 +75,25 @@ export const ParticipantManager = () => {
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="text-sm font-semibold text-slate-900">Participants</h3>
-        <p className="text-xs text-slate-500">
+        <h3 className="text-sm font-semibold text-[hsl(var(--foreground))]">Participants</h3>
+        <p className="text-xs text-[hsl(var(--muted-foreground))]">
           Manage contacts, avatars, and choose who is sending the next message.
         </p>
       </div>
 
-      {error ? <div className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{error}</div> : null}
+      {error ? (
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+          {error}
+        </div>
+      ) : null}
 
       <div className="space-y-3">
         {participants.map((participant) => (
           <div
             key={participant.id}
             className={cn(
-              "rounded-xl border border-slate-200 bg-white p-3 shadow-sm",
-              activeParticipantId === participant.id && "ring-2 ring-slate-900/15",
+              "rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-3 shadow-sm",
+              activeParticipantId === participant.id && "ring-2 ring-cyan-400/25",
             )}
           >
             <div className="flex flex-wrap items-center gap-3">
@@ -104,7 +108,7 @@ export const ParticipantManager = () => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="absolute -top-1 -left-1 h-6 w-6 rounded-full bg-white shadow"
+                      className="absolute -top-1 -left-1 h-6 w-6 rounded-full bg-[hsl(var(--card))] shadow"
                       onClick={() => updateParticipant(participant.id, { avatarUrl: undefined })}
                     >
                       <X className="h-3 w-3" />
@@ -112,12 +116,12 @@ export const ParticipantManager = () => {
                     </Button>
                   </>
                 ) : (
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-500">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[hsl(var(--muted))] text-sm font-semibold text-[hsl(var(--muted-foreground))]">
                     {participant.name.slice(0, 2).toUpperCase() || "??"}
                   </div>
                 )}
                 {participant.isVerified ? (
-                  <span className="absolute -top-1 -right-1 rounded-full bg-white p-0.5 shadow">
+                  <span className="absolute -top-1 -right-1 rounded-full bg-[hsl(var(--card))] p-0.5 shadow">
                     <VerifiedBadge className="h-3.5 w-3.5" />
                   </span>
                 ) : null}
@@ -125,7 +129,7 @@ export const ParticipantManager = () => {
                   asChild
                   variant="ghost"
                   size="icon"
-                  className="absolute -bottom-2 -right-2 h-7 w-7 rounded-full bg-white shadow"
+                  className="absolute -bottom-2 -right-2 h-7 w-7 rounded-full bg-[hsl(var(--card))] shadow"
                 >
                   <label htmlFor={`avatar-${participant.id}`}>
                     <ImagePlus className="h-3.5 w-3.5" />
@@ -174,8 +178,8 @@ export const ParticipantManager = () => {
                     onChange={(event) => updateParticipant(participant.id, { color: event.target.value })}
                   />
                 </div>
-                <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-                  <span className="text-xs font-medium text-slate-500">Verified badge</span>
+                <div className="flex items-center justify-between rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-3 py-2">
+                  <span className="text-xs font-medium text-[hsl(var(--muted-foreground))]">Verified badge</span>
                   <Switch
                     checked={Boolean(participant.isVerified)}
                     onCheckedChange={(value) => updateParticipant(participant.id, { isVerified: value })}
@@ -201,8 +205,8 @@ export const ParticipantManager = () => {
         ))}
       </div>
 
-      <div className="rounded-xl border border-dashed border-slate-200 bg-white/70 p-3">
-        <Label className="text-xs uppercase text-slate-400">Add new participant</Label>
+      <div className="rounded-xl border border-dashed border-[hsl(var(--border))] bg-[hsl(var(--card))]/80 p-3">
+        <Label className="text-xs uppercase text-[hsl(var(--muted-foreground))]">Add new participant</Label>
         <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto]">
           <Input
             value={draft.name}
@@ -236,8 +240,8 @@ export const ParticipantManager = () => {
               Upload avatar
             </label>
           </Button>
-          <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-1">
-            <span className="text-xs text-slate-500">Verified</span>
+          <div className="flex items-center gap-2 rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--secondary))] px-2 py-1">
+            <span className="text-xs text-[hsl(var(--muted-foreground))]">Verified</span>
             <Switch
               checked={Boolean(draft.isVerified)}
               onCheckedChange={(value) => setDraft((prev) => ({ ...prev, isVerified: value }))}
@@ -257,7 +261,7 @@ export const ParticipantManager = () => {
             value={draft.color}
             onChange={(event) => setDraft((prev) => ({ ...prev, color: event.target.value }))}
           />
-          <span className="text-xs text-slate-500">Uploads only (best for exports)</span>
+          <span className="text-xs text-[hsl(var(--muted-foreground))]">Uploads only (best for exports)</span>
           <input
             id="avatar-draft"
             type="file"

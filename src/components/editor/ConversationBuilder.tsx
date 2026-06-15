@@ -75,9 +75,9 @@ const MessageRow = ({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm hover:bg-slate-50",
-        isHidden && "bg-slate-50 text-slate-500",
-        isDragging && "ring-2 ring-slate-900/20",
+        "flex items-center gap-3 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 shadow-sm hover:bg-[hsl(var(--accent))]",
+        isHidden && "bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]",
+        isDragging && "ring-2 ring-cyan-400/25",
       )}
     >
       <Button
@@ -93,13 +93,13 @@ const MessageRow = ({
         <div
           className={cn(
             "text-sm font-medium break-words whitespace-normal sm:truncate",
-            isHidden ? "text-slate-500" : "text-slate-900",
+            isHidden ? "text-[hsl(var(--muted-foreground))]" : "text-[hsl(var(--foreground))]",
           )}
           title={message.content}
         >
           {message.content}
         </div>
-        <div className="text-xs text-slate-500">
+        <div className="text-xs text-[hsl(var(--muted-foreground))]">
           {message.type} - {formatTimestamp(message.timestamp)}
         </div>
       </div>
@@ -119,7 +119,7 @@ const MessageRow = ({
         <Button
           variant="ghost"
           size="icon"
-          className={cn(isActionsOpen && "bg-slate-100")}
+          className={cn(isActionsOpen && "bg-[hsl(var(--accent))]")}
           onClick={onToggleActions}
         >
           <MoreHorizontal className="h-4 w-4" />
@@ -310,19 +310,19 @@ export const ConversationBuilder = () => {
     <TooltipProvider>
       <div className="space-y-4">
         <div>
-          <h3 className="text-sm font-semibold text-slate-900">Conversation Builder</h3>
-          <p className="text-xs text-slate-500">
+          <h3 className="text-sm font-semibold text-[hsl(var(--foreground))]">Conversation Builder</h3>
+          <p className="text-xs text-[hsl(var(--muted-foreground))]">
             Add messages, drag to reorder, or switch to Easy mode for bulk edits.
           </p>
         </div>
 
         <div className="space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-400">Messages</h4>
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">Messages</h4>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs text-slate-500">{messages.length} total</span>
-              <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
-                <Label className="text-[10px] uppercase text-slate-400">Global date</Label>
+              <span className="text-xs text-[hsl(var(--muted-foreground))]">{messages.length} total</span>
+              <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2">
+                <Label className="text-[10px] uppercase text-[hsl(var(--muted-foreground))]">Global date</Label>
                 <Input
                   type="date"
                   value={globalDate}
@@ -330,7 +330,7 @@ export const ConversationBuilder = () => {
                   className="h-8 w-[145px] text-xs"
                   disabled={messages.length === 0}
                 />
-                <span className="text-xs text-slate-400">
+                <span className="text-xs text-[hsl(var(--muted-foreground))]">
                   {hasMixedDates ? "Mixed dates" : "Keeps time-of-day"}
                 </span>
               </div>
@@ -358,10 +358,10 @@ export const ConversationBuilder = () => {
               </Button>
             </div>
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2">
             <div className="space-y-1">
-              <div className="text-xs font-semibold uppercase text-slate-400">Editor view</div>
-              <p className="text-xs text-slate-500">Switch between the list and easy text editor.</p>
+              <div className="text-xs font-semibold uppercase text-[hsl(var(--muted-foreground))]">Editor view</div>
+              <p className="text-xs text-[hsl(var(--muted-foreground))]">Switch between the list and easy text editor.</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Button
@@ -383,9 +383,9 @@ export const ConversationBuilder = () => {
             </div>
           </div>
           {viewMode === "easy" ? (
-            <div className="rounded-xl border border-slate-200 bg-white p-3">
+            <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <Label className="text-xs uppercase text-slate-400">Easy editor</Label>
+                <Label className="text-xs uppercase text-[hsl(var(--muted-foreground))]">Easy editor</Label>
                 <Button
                   type="button"
                   variant="ghost"
@@ -405,13 +405,13 @@ export const ConversationBuilder = () => {
                   placeholder={`< ${activeParticipant?.name ?? "Sender"} message\n> ${receiverParticipant?.name ?? "Receiver"} message`}
                   className="min-h-[280px] resize-y"
                 />
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-[hsl(var(--muted-foreground))]">
                   <span className="font-semibold">&lt;</span> = {activeParticipant?.name ?? "Sender"},{" "}
                   <span className="font-semibold">&gt;</span> = {receiverParticipant?.name ?? "Receiver"}.
                   New lines become new messages, timestamps default to now.
                 </p>
                 {easyError ? (
-                  <div className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">
+                  <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-200">
                     {easyError}
                   </div>
                 ) : null}
@@ -435,7 +435,7 @@ export const ConversationBuilder = () => {
           ) : (
             <>
               {messages.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-xs text-slate-500">
+                <div className="rounded-xl border border-dashed border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-4 py-6 text-center text-xs text-[hsl(var(--muted-foreground))]">
                   No messages yet. Add the first entry above.
                 </div>
               ) : null}
@@ -486,7 +486,7 @@ export const ConversationBuilder = () => {
                             }
                           />
                           {isActionsOpen ? (
-                            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
+                            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2">
                               <div className="flex items-center gap-1 sm:hidden">
                                 <Button
                                   variant="ghost"
@@ -544,7 +544,7 @@ export const ConversationBuilder = () => {
                             </div>
                           ) : null}
                           {editingId === message.id ? (
-                            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                            <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))] p-3">
                               <MessageForm
                                 key={message.id}
                                 participants={participants}
@@ -576,7 +576,7 @@ export const ConversationBuilder = () => {
             <Separator />
             <div className="space-y-3">
               {isAddOpen ? (
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))] p-3">
                   <MessageForm
                     key="new"
                     participants={participants}

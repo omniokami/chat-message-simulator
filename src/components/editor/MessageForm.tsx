@@ -195,12 +195,12 @@ export const MessageForm = ({
       {type === "image" ? (
         <div className="space-y-2">
           <Label>Image upload</Label>
-          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2">
-            <div className="h-20 w-28 overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2">
+            <div className="h-20 w-28 overflow-hidden rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))]">
               {imageUrl ? (
                 <img src={imageUrl} alt="Uploaded preview" className="h-full w-full object-cover" />
               ) : (
-                <div className="flex h-full items-center justify-center text-xs text-slate-400">
+                <div className="flex h-full items-center justify-center text-xs text-[hsl(var(--muted-foreground))]">
                   No image
                 </div>
               )}
@@ -221,7 +221,7 @@ export const MessageForm = ({
                   Remove
                 </Button>
               ) : null}
-              <span className="text-xs text-slate-500">JPG, PNG, or WEBP up to 5MB.</span>
+              <span className="text-xs text-[hsl(var(--muted-foreground))]">JPG, PNG, or WEBP up to 5MB.</span>
             </div>
             <input
               ref={fileInputRef}
@@ -237,7 +237,7 @@ export const MessageForm = ({
             />
           </div>
           {imageError ? (
-            <div className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">
+            <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-200">
               {imageError}
             </div>
           ) : null}

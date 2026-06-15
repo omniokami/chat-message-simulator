@@ -3,7 +3,7 @@ import { cn } from "@/utils/cn"
 
 const Separator = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("h-px w-full bg-slate-200", className)} {...props} />
+    <div ref={ref} className={cn("h-px w-full bg-[hsl(var(--border))]", className)} {...props} />
   ),
 )
 Separator.displayName = "Separator"

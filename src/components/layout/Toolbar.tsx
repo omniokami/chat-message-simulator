@@ -115,14 +115,14 @@ export const Toolbar = () => {
 
   return (
     <TooltipProvider>
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/70 px-4 py-3 shadow-lg backdrop-blur">
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))]/85 px-4 py-3 shadow-[0_20px_45px_rgba(2,8,23,0.35)] backdrop-blur">
         <div className="flex w-full items-center gap-3 sm:w-auto">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-xs font-semibold uppercase tracking-widest text-white">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[hsl(var(--primary))] text-xs font-semibold uppercase tracking-widest text-[hsl(var(--primary-foreground))]">
             CS
           </div>
           <div className="space-y-0.5">
-            <div className="text-sm font-semibold text-slate-900">Chat Message Simulator</div>
-            <div className="text-xs text-slate-500">Craft and export chat mockups</div>
+            <div className="text-sm font-semibold text-[hsl(var(--foreground))]">Chat Message Simulator</div>
+            <div className="text-xs text-[hsl(var(--muted-foreground))]">Craft and export chat mockups</div>
             <div className="hidden flex-wrap items-center gap-2 pt-1 sm:flex">
               {projectBadges.map((badge) => (
                 <Badge key={badge} variant="secondary">
@@ -136,7 +136,7 @@ export const Toolbar = () => {
         <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
           <Badge variant="secondary">{autosaveLabel}</Badge>
 
-          <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-white/80 p-1 shadow-sm">
+          <div className="flex items-center gap-1 rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--secondary))] p-1 shadow-sm">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -187,7 +187,7 @@ export const Toolbar = () => {
               </DialogHeader>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
                     File
                   </div>
                   <div className="grid gap-2 sm:grid-cols-2">
@@ -225,7 +225,7 @@ export const Toolbar = () => {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
                     Utilities
                   </div>
                   <div className="flex flex-wrap gap-2">

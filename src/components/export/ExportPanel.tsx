@@ -124,8 +124,8 @@ export const ExportPanel = ({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-semibold text-slate-900">Export</h3>
-          <p className="text-xs text-slate-500">Set size, format, and quality before exporting.</p>
+          <h3 className="text-sm font-semibold text-[hsl(var(--foreground))]">Export</h3>
+          <p className="text-xs text-[hsl(var(--muted-foreground))]">Set size, format, and quality before exporting.</p>
         </div>
         <Button variant="ghost" size="sm" onClick={() => setIsSummaryOpen(!isSummaryOpen)}>
           {isSummaryOpen ? "Collapse" : "Expand"}
@@ -133,10 +133,10 @@ export const ExportPanel = ({
       </div>
 
       {isSummaryOpen ? (
-        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
+        <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-4 py-3 text-xs text-[hsl(var(--muted-foreground))]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Image className="h-4 w-4 text-slate-500" />
+              <Image className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
               <span>{settingsSummary}</span>
             </div>
             <Button
@@ -168,7 +168,7 @@ export const ExportPanel = ({
         <div className="space-y-2">
           <Label>Custom width</Label>
           <div className="relative">
-            <StretchHorizontal className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+            <StretchHorizontal className="absolute left-3 top-3 h-4 w-4 text-[hsl(var(--muted-foreground))]" />
             <Input
               type="number"
               min={240}
@@ -186,7 +186,7 @@ export const ExportPanel = ({
         <div className="space-y-2">
           <Label>Custom height</Label>
           <div className="relative">
-            <StretchVertical className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+            <StretchVertical className="absolute left-3 top-3 h-4 w-4 text-[hsl(var(--muted-foreground))]" />
             <Input
               type="number"
               min={240}
@@ -258,7 +258,7 @@ export const ExportPanel = ({
             Subsequent screens
           </Button>
         </div>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-[hsl(var(--muted-foreground))]">
           {exportSettings.captureMode === "full"
             ? `Height expands automatically to ${effectiveHeight}px so every visible message is included.`
             : exportSettings.captureMode === "screens"
@@ -295,17 +295,17 @@ export const ExportPanel = ({
             <DialogDescription>{settingsSummary}</DialogDescription>
           </DialogHeader>
           {isPreviewing ? (
-            <div className="text-sm text-slate-500">Rendering preview...</div>
+            <div className="text-sm text-[hsl(var(--muted-foreground))]">Rendering preview...</div>
           ) : null}
           {previewError ? (
-            <div className="text-sm text-red-600">Export failed: {previewError}</div>
+            <div className="text-sm text-red-300">Export failed: {previewError}</div>
           ) : null}
           {previewUrls.length ? (
             <div className="space-y-3">
               {previewUrls.map((previewUrl, index) => (
                 <div key={previewUrl} className="space-y-2">
                   {previewUrls.length > 1 ? (
-                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
                       Screen {index + 1}
                     </div>
                   ) : null}
@@ -316,11 +316,11 @@ export const ExportPanel = ({
                         ? `Export preview screen ${index + 1}`
                         : "Export preview"
                     }
-                    className="max-h-[70vh] w-full rounded-xl border border-slate-200 bg-slate-50 object-contain"
+                    className="max-h-[70vh] w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))] object-contain"
                   />
                 </div>
               ))}
-              <div className="text-xs text-slate-500">
+              <div className="text-xs text-[hsl(var(--muted-foreground))]">
                 {previewUrls.length > 1
                   ? "Download saves one image per screen in order."
                   : "Right click the image to save."}
@@ -331,11 +331,11 @@ export const ExportPanel = ({
       </Dialog>
 
       {preset ? (
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-[hsl(var(--muted-foreground))]">
           Preset: {preset.label} - {preset.width} x {preset.height}
         </p>
       ) : (
-        <p className="text-xs text-slate-500">Custom size active.</p>
+        <p className="text-xs text-[hsl(var(--muted-foreground))]">Custom size active.</p>
       )}
     </div>
   )
