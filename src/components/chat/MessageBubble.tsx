@@ -140,8 +140,14 @@ export const MessageBubble = ({
       : undefined
   const resolvedSpoilerBlur = normalizeSpoilerBlur(spoilerBlur)
   const spoilerImageStyle: React.CSSProperties | undefined =
-    isSpoilerCovered && resolvedSpoilerBlur > 0
-      ? { filter: `blur(${resolvedSpoilerBlur}px)` }
+    showSpoiler
+      ? {
+          filter:
+            isSpoilerCovered && resolvedSpoilerBlur > 0
+              ? `blur(${resolvedSpoilerBlur}px)`
+              : "blur(0px)",
+          transition: "filter 220ms cubic-bezier(0.22, 1, 0.36, 1)",
+        }
       : undefined
   const imageRef = useRef<HTMLImageElement | null>(null)
   const imageObjectUrlRef = useRef<{
@@ -403,27 +409,21 @@ export const MessageBubble = ({
                     : "max-h-64 max-w-[240px] object-contain",
                 )}
               />
-              {isSpoilerCovered ? (
+              {showSpoiler ? (
                 <div
                   aria-hidden="true"
                   data-spoiler-cover-overlay="true"
-                  className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/25 text-white/80 transition-opacity"
+                  className={cn(
+                    "pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/25 text-white/80 transition-opacity duration-200 ease-out",
+                    isSpoilerCovered ? "opacity-100" : "opacity-0",
+                  )}
                 >
-                  <span className="flex flex-col items-center gap-1 rounded-full bg-black/35 px-4 py-3">
-                    <EyeOff className="h-7 w-7 opacity-80" />
-                    <span className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] opacity-80">
-                      spoiler
-                    </span>
-                  </span>
-                </div>
-              ) : null}
-              {shouldExportSpoiler && !isSpoilerCovered ? (
-                <div
-                  aria-hidden="true"
-                  data-export-spoiler-overlay="true"
-                  className="pointer-events-none absolute inset-0 z-10 hidden items-center justify-center bg-black/25 text-white/80 transition-opacity"
-                >
-                  <span className="flex flex-col items-center gap-1 rounded-full bg-black/35 px-4 py-3">
+                  <span
+                    className={cn(
+                      "flex flex-col items-center gap-1 rounded-full bg-black/35 px-4 py-3 transition-all duration-200 ease-out",
+                      isSpoilerCovered ? "scale-100 opacity-100" : "scale-95 opacity-0",
+                    )}
+                  >
                     <EyeOff className="h-7 w-7 opacity-80" />
                     <span className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] opacity-80">
                       spoiler
@@ -440,12 +440,19 @@ export const MessageBubble = ({
                   <EyeOff className="h-4 w-4" />
                 </div>
               ) : null}
-              {showSpoiler && isSpoilerRevealed ? (
+              {showSpoiler ? (
                 <button
                   type="button"
                   aria-label="Hide spoiler image"
                   data-spoiler-reveal-control="true"
-                  className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/45 text-white/80 shadow-sm transition-colors hover:bg-black/60"
+                  aria-hidden={isSpoilerCovered}
+                  tabIndex={isSpoilerCovered ? -1 : undefined}
+                  className={cn(
+                    "absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/45 text-white/80 shadow-sm transition-all duration-200 ease-out hover:bg-black/60",
+                    isSpoilerCovered
+                      ? "pointer-events-none scale-95 opacity-0"
+                      : "scale-100 opacity-100",
+                  )}
                   onClick={(event) => {
                     event.stopPropagation()
                     setSpoilerRevealed(false)

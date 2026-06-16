@@ -28,7 +28,11 @@ interface ExportRenderOptions {
   }>
 }
 
-const applyExportSpoilerState = (clone: HTMLElement, revealImageSpoilers: boolean, showSpoilerIconOnRevealedImages: boolean) => {
+const applyExportSpoilerState = (
+  clone: HTMLElement,
+  revealImageSpoilers: boolean,
+  showSpoilerIconOnRevealedImages: boolean,
+) => {
   const spoilerFrames = Array.from(
     clone.querySelectorAll<HTMLElement>('[data-image-spoiler="true"]'),
   )
@@ -37,13 +41,14 @@ const applyExportSpoilerState = (clone: HTMLElement, revealImageSpoilers: boolea
     const image = frame.querySelector<HTMLElement>('[data-spoiler-image="true"]')
     const shouldSpoiler = !revealImageSpoilers && frame.dataset.exportSpoiler === "true"
     const coverOverlay = frame.querySelector<HTMLElement>('[data-spoiler-cover-overlay="true"]')
-    const exportOverlay = frame.querySelector<HTMLElement>('[data-export-spoiler-overlay="true"]')
+    const coverBadge = coverOverlay?.firstElementChild as HTMLElement | null
     const exportCorner = frame.querySelector<HTMLElement>('[data-export-spoiler-corner="true"]')
+    const revealControls = Array.from(
+      frame.querySelectorAll<HTMLElement>('[data-spoiler-reveal-control="true"]'),
+    )
 
     if (shouldSpoiler) {
-      frame
-        .querySelectorAll<HTMLElement>('[data-spoiler-reveal-control="true"]')
-        .forEach((control) => control.remove())
+      revealControls.forEach((control) => control.remove())
       exportCorner?.remove()
 
       if (image) {
@@ -51,14 +56,14 @@ const applyExportSpoilerState = (clone: HTMLElement, revealImageSpoilers: boolea
         image.style.filter = `blur(${blur}px)`
       }
 
-      const overlay = coverOverlay ?? exportOverlay
-      if (overlay) {
-        overlay.classList.remove("hidden")
-        overlay.classList.add("flex")
-        overlay.style.display = ""
+      if (coverOverlay) {
+        coverOverlay.classList.remove("opacity-0")
+        coverOverlay.classList.add("opacity-100")
+        coverOverlay.style.opacity = "1"
       }
-      if (coverOverlay && exportOverlay && coverOverlay !== exportOverlay) {
-        exportOverlay.remove()
+      if (coverBadge) {
+        coverBadge.classList.remove("scale-95", "opacity-0")
+        coverBadge.classList.add("scale-100", "opacity-100")
       }
       return
     }
@@ -67,7 +72,9 @@ const applyExportSpoilerState = (clone: HTMLElement, revealImageSpoilers: boolea
       image.style.filter = "none"
     }
     coverOverlay?.remove()
-    exportOverlay?.remove()
+    if (!showSpoilerIconOnRevealedImages) {
+      revealControls.forEach((control) => control.remove())
+    }
     if (exportCorner) {
       if (showSpoilerIconOnRevealedImages) {
         exportCorner.classList.remove("hidden")
