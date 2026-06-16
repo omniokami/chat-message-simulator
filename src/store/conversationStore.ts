@@ -1,7 +1,7 @@
 import { create } from "zustand"
 import { createJSONStorage, persist } from "zustand/middleware"
 import { defaultLayoutId } from "../constants/layouts"
-import type { Conversation, Participant } from "../types/conversation"
+import type { Conversation, ConversationEditorState, Participant } from "../types/conversation"
 import type { Message, MessageStatus, MessageType } from "../types/message"
 import type { LayoutId, ThemeId } from "../types/layout"
 import { generateId } from "../utils/helpers"
@@ -84,6 +84,7 @@ interface ConversationStore {
   deleteMessage: (messageId: string) => void
   duplicateMessage: (messageId: string) => void
   setMessages: (messages: Message[]) => void
+  setConversationEditorState: (updates: Partial<ConversationEditorState>) => void
   setExportSettings: (settings: Partial<ExportSettings>) => void
   setUi: (updates: Partial<UiState>) => void
   resetConversation: () => void
@@ -244,6 +245,7 @@ const buildDefaultConversation = (): Conversation => {
       createdAt: new Date(firstTimestamp).toISOString(),
       updatedAt: updatedAt.toISOString(),
     },
+    editorState: { ...defaultConversationEditorState },
   }
 }
 
@@ -265,6 +267,19 @@ const defaultUiState: UiState = {
   activePanel: "messages",
   autoFit: true,
 }
+
+const defaultConversationEditorState: ConversationEditorState = {
+  globalDateTime: "",
+  preserveNaturalTime: true,
+}
+
+const normalizeConversationEditorState = (
+  editorState?: Partial<ConversationEditorState>,
+): ConversationEditorState => ({
+  globalDateTime: editorState?.globalDateTime ?? defaultConversationEditorState.globalDateTime,
+  preserveNaturalTime:
+    editorState?.preserveNaturalTime ?? defaultConversationEditorState.preserveNaturalTime,
+})
 
 const STORAGE_KEY = "chat-sim-storage"
 const HISTORY_LIMIT = 3
@@ -471,6 +486,21 @@ export const useConversationStore = create<ConversationStore>()(
           },
           history: pushHistory(state),
         })),
+      setConversationEditorState: (updates) =>
+        set((state) => ({
+          conversation: {
+            ...state.conversation,
+            editorState: {
+              ...normalizeConversationEditorState(state.conversation.editorState),
+              ...updates,
+            },
+            metadata: {
+              ...state.conversation.metadata,
+              updatedAt: new Date().toISOString(),
+            },
+          },
+          history: pushHistory(state),
+        })),
       setExportSettings: (settings) =>
         set((state) => ({
           exportSettings: {
@@ -505,6 +535,7 @@ export const useConversationStore = create<ConversationStore>()(
             ...conversation,
             participants,
             groupName,
+            editorState: normalizeConversationEditorState(conversation.editorState),
           },
           activeParticipantId: participants[0]?.id ?? "",
           history: pushHistory(state),
@@ -576,7 +607,7 @@ export const useConversationStore = create<ConversationStore>()(
     {
       name: STORAGE_KEY,
       storage: createJSONStorage(() => localStorage),
-      version: 3,
+      version: 4,
       migrate: (state) => {
         if (!state) return state
         const typed = state as ConversationStore
@@ -586,6 +617,7 @@ export const useConversationStore = create<ConversationStore>()(
           conversation: {
             ...typed.conversation,
             participants: normalizeParticipants(typed.conversation.participants),
+            editorState: normalizeConversationEditorState(typed.conversation.editorState),
           },
           exportSettings: {
             ...defaultExportSettings,

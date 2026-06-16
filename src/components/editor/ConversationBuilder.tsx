@@ -31,17 +31,18 @@ import { MessageForm } from "@/components/editor/MessageForm"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/utils/cn"
 import { formatTimestamp, generateId } from "@/utils/helpers"
 
-const toDateInputValue = (iso: string) => {
+const toDateTimeInputValue = (iso: string) => {
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return ""
   const offset = date.getTimezoneOffset() * 60000
-  return new Date(date.getTime() - offset).toISOString().slice(0, 10)
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16)
 }
 
 const MessageRow = ({
@@ -139,6 +140,15 @@ export const ConversationBuilder = () => {
   const deleteMessage = useConversationStore((state) => state.deleteMessage)
   const duplicateMessage = useConversationStore((state) => state.duplicateMessage)
   const setMessages = useConversationStore((state) => state.setMessages)
+  const globalDateInput = useConversationStore(
+    (state) => state.conversation.editorState?.globalDateTime ?? "",
+  )
+  const preserveNaturalTime = useConversationStore(
+    (state) => state.conversation.editorState?.preserveNaturalTime ?? true,
+  )
+  const setConversationEditorState = useConversationStore(
+    (state) => state.setConversationEditorState,
+  )
 
   const [editingId, setEditingId] = useState<string | null>(null)
   const [openActionsId, setOpenActionsId] = useState<string | null>(null)
@@ -154,13 +164,14 @@ export const ConversationBuilder = () => {
     if (messages.length === 0) {
       return { globalDate: "", hasMixedDates: false }
     }
-    const dateValues = messages.map((message) => toDateInputValue(message.timestamp))
+    const dateValues = messages.map((message) => toDateTimeInputValue(message.timestamp))
     const uniqueDates = new Set(dateValues)
     return {
       globalDate: uniqueDates.size === 1 ? dateValues[0] : "",
       hasMixedDates: uniqueDates.size > 1,
     }
   }, [messages])
+  const effectiveGlobalDateInput = messages.length === 0 ? "" : globalDateInput || globalDate
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -179,19 +190,58 @@ export const ConversationBuilder = () => {
     setMessages(arrayMove(messages, index, targetIndex))
   }
 
-  const handleGlobalDateChange = (value: string) => {
+  const normalizeNaturalTimeline = (sourceMessages: Message[], startIndex = 0) => {
+    if (sourceMessages.length === 0 || startIndex >= sourceMessages.length) {
+      return { messages: sourceMessages, changed: false }
+    }
+
+    const nextMessages = [...sourceMessages]
+    let changed = false
+    let minimumTime: number | null = null
+
+    for (let index = 0; index < startIndex; index += 1) {
+      const timestamp = new Date(nextMessages[index].timestamp).getTime()
+      minimumTime = Number.isNaN(timestamp) ? null : timestamp
+    }
+
+    for (let index = startIndex; index < nextMessages.length; index += 1) {
+      const message = nextMessages[index]
+      const timestamp = new Date(message.timestamp).getTime()
+      if (Number.isNaN(timestamp)) {
+        minimumTime = null
+        continue
+      }
+
+      if (minimumTime !== null && timestamp < minimumTime) {
+        nextMessages[index] = {
+          ...message,
+          timestamp: new Date(minimumTime).toISOString(),
+        }
+        changed = true
+        continue
+      }
+
+      minimumTime = timestamp
+    }
+
+    return {
+      messages: changed ? nextMessages : sourceMessages,
+      changed,
+    }
+  }
+
+  const applyGlobalDateToAll = (value: string) => {
     if (!value || messages.length === 0) return
-    const target = new Date(`${value}T00:00`)
+    const target = new Date(value)
     if (Number.isNaN(target.getTime())) return
+
     setMessages(
       messages.map((message) => {
-        const current = new Date(message.timestamp)
-        if (Number.isNaN(current.getTime())) return message
-        const updated = new Date(current)
-        updated.setFullYear(target.getFullYear(), target.getMonth(), target.getDate())
-        return { ...message, timestamp: updated.toISOString() }
+        if (Number.isNaN(new Date(message.timestamp).getTime())) return message
+        return { ...message, timestamp: target.toISOString() }
       }),
     )
+    showToast("All message dates and times reset.")
   }
 
   const resolveReceiverId = () => {
@@ -299,6 +349,55 @@ export const ConversationBuilder = () => {
     showToast("Easy changes applied.")
   }
 
+  const handleMessageSave = (
+    messageId: string,
+    payload: {
+      senderId: string
+      content: string
+      imageUrl?: string
+      timestamp: string
+      type: Message["type"]
+      status: Message["status"]
+    },
+  ) => {
+    const messageIndex = messages.findIndex((message) => message.id === messageId)
+    if (messageIndex === -1) return
+
+    const currentMessage = messages[messageIndex]
+    const previousTime = new Date(currentMessage.timestamp).getTime()
+    const nextTime = new Date(payload.timestamp).getTime()
+    const shouldPreserveNaturalTime =
+      preserveNaturalTime &&
+      currentMessage.timestamp !== payload.timestamp &&
+      !Number.isNaN(previousTime) &&
+      !Number.isNaN(nextTime)
+
+    if (!shouldPreserveNaturalTime) {
+      updateMessage(messageId, payload)
+      setEditingId(null)
+      return
+    }
+
+    const updatedMessages = messages.map((message) =>
+      message.id === messageId ? { ...message, ...payload } : message,
+    )
+    const { messages: normalizedMessages } = normalizeNaturalTimeline(updatedMessages, messageIndex)
+    setMessages(normalizedMessages)
+    setEditingId(null)
+    showToast("Updated message timing and preserved a natural timeline.")
+  }
+
+  const handlePreserveNaturalTimeChange = (enabled: boolean) => {
+    setConversationEditorState({ preserveNaturalTime: enabled })
+    if (!enabled) return
+
+    const { messages: normalizedMessages, changed } = normalizeNaturalTimeline(messages)
+    if (!changed) return
+
+    setMessages(normalizedMessages)
+    showToast("Applied natural time across the whole conversation.")
+  }
+
   const hasHidden = messages.some((message) => message.isHidden)
   const hasVisible = messages.some((message) => !message.isHidden)
   const activeParticipant = participants.find((participant) => participant.id === activeParticipantId)
@@ -321,18 +420,47 @@ export const ConversationBuilder = () => {
             <h4 className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">Messages</h4>
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs text-[hsl(var(--muted-foreground))]">{messages.length} total</span>
-              <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2">
-                <Label className="text-[10px] uppercase text-[hsl(var(--muted-foreground))]">Global date</Label>
-                <Input
-                  type="date"
-                  value={globalDate}
-                  onChange={(event) => handleGlobalDateChange(event.target.value)}
-                  className="h-8 w-[145px] text-xs"
-                  disabled={messages.length === 0}
-                />
-                <span className="text-xs text-[hsl(var(--muted-foreground))]">
-                  {hasMixedDates ? "Mixed dates" : "Keeps time-of-day"}
-                </span>
+              <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Label className="text-[10px] uppercase text-[hsl(var(--muted-foreground))]">Global date/time</Label>
+                  <Input
+                    type="datetime-local"
+                    value={effectiveGlobalDateInput}
+                    onChange={(event) =>
+                      setConversationEditorState({ globalDateTime: event.target.value })
+                    }
+                    className="h-8 w-auto max-w-full text-xs"
+                    disabled={messages.length === 0}
+                  />
+                  <span className="text-xs text-[hsl(var(--muted-foreground))]">
+                    {hasMixedDates ? "Mixed date/time" : "Same date/time"}
+                  </span>
+                </div>
+                <div className="mt-2 flex justify-start">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8"
+                    onClick={() => applyGlobalDateToAll(effectiveGlobalDateInput)}
+                    disabled={messages.length === 0 || !effectiveGlobalDateInput}
+                  >
+                    Apply global date/time
+                  </Button>
+                </div>
+                <div className="mt-2 flex items-center justify-between gap-3 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-3 py-2">
+                  <div className="space-y-0.5">
+                    <div className="text-xs font-medium text-[hsl(var(--foreground))]">Preserve natural time</div>
+                    <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
+                      Keeps the thread from moving backward in time. Turning this on also fixes the current conversation from top to bottom.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={preserveNaturalTime}
+                    onCheckedChange={handlePreserveNaturalTimeChange}
+                    aria-label="Preserve natural time"
+                  />
+                </div>
               </div>
               <Button
                 type="button"
@@ -553,10 +681,7 @@ export const ConversationBuilder = () => {
                                 compact
                                 advancedOpen={isAdvancedOpen}
                                 onToggleAdvanced={() => setIsAdvancedOpen((prev) => !prev)}
-                                onSubmit={(payload) => {
-                                  updateMessage(message.id, payload)
-                                  setEditingId(null)
-                                }}
+                                onSubmit={(payload) => handleMessageSave(message.id, payload)}
                                 onCancel={() => setEditingId(null)}
                                 submitLabel="Save changes"
                               />

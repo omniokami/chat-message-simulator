@@ -24,9 +24,9 @@ export const formatDateSeparator = (timestamp: string) => {
   }
 }
 
-export const formatInstagramDateSeparator = (timestamp: string) => {
+export const formatInstagramDateSeparator = (timestamp: string, showYear = false) => {
   try {
-    return format(new Date(timestamp), "d MMM 'AT' HH:mm").toUpperCase()
+    return format(new Date(timestamp), showYear ? "d MMM yyyy 'AT' HH:mm" : "d MMM 'AT' HH:mm").toUpperCase()
   } catch {
     return ""
   }

@@ -16,10 +16,16 @@ export interface ConversationMetadata {
   updatedAt: string
 }
 
+export interface ConversationEditorState {
+  globalDateTime: string
+  preserveNaturalTime: boolean
+}
+
 export interface Conversation {
   id: string
   participants: Participant[]
   messages: Message[]
   metadata: ConversationMetadata
   groupName?: string
+  editorState?: ConversationEditorState
 }

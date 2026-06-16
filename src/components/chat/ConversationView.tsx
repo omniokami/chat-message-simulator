@@ -25,6 +25,12 @@ export const ConversationView = ({
   contentRef,
 }: ConversationViewProps) => {
   const visibleMessages = messages.filter((message) => !message.isHidden)
+  const visibleYears = new Set(
+    visibleMessages
+      .map((message) => new Date(message.timestamp).getFullYear())
+      .filter((year) => !Number.isNaN(year)),
+  )
+  const instagramShowsYear = visibleYears.size > 1
   const isWhatsApp = layout.id === "whatsapp"
   const isSnapchat = layout.id === "snapchat"
   const isMessenger = layout.id === "messenger"
@@ -98,7 +104,7 @@ export const ConversationView = ({
         {visibleMessages.map((message, index) => {
           const sender = participants.find((participant) => participant.id === message.senderId)
           const currentDate = isInstagram
-            ? formatInstagramDateSeparator(message.timestamp)
+            ? formatInstagramDateSeparator(message.timestamp, instagramShowsYear)
             : formatDateSeparator(message.timestamp)
           const currentDateKey = formatDateSeparator(message.timestamp)
           const previousDateKey =
