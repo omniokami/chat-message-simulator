@@ -14,6 +14,7 @@ interface ConversationViewProps {
   mode?: "scroll" | "expanded"
   containerRef?: React.Ref<HTMLDivElement>
   contentRef?: React.Ref<HTMLDivElement>
+  onImageActivate?: (message: Message) => void
 }
 
 export const ConversationView = ({
@@ -25,6 +26,7 @@ export const ConversationView = ({
   mode = "scroll",
   containerRef,
   contentRef,
+  onImageActivate,
 }: ConversationViewProps) => {
   const visibleMessages = messages.filter((message) => !message.isHidden)
   const visibleYears = new Set(
@@ -128,7 +130,11 @@ export const ConversationView = ({
           }
 
           return (
-            <div key={message.id} className={isWhatsApp ? "space-y-2" : "space-y-3"}>
+            <div
+              key={message.id}
+              className={isWhatsApp ? "space-y-2" : "space-y-3"}
+              data-message-id={message.id}
+            >
               {showDate ? <div className={dateBadgeClass}>{currentDate}</div> : null}
               <MessageBubble
                 message={message}
@@ -138,6 +144,7 @@ export const ConversationView = ({
                 isGroup={isGroup}
                 spoilerBlur={spoilerBlur}
                 showAvatar={showAvatar}
+                onImageActivate={onImageActivate}
               />
             </div>
           )

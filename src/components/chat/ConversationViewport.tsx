@@ -10,6 +10,7 @@ import {
 } from "lucide-react"
 import type { ReactNode } from "react"
 import type { Conversation } from "@/types/conversation"
+import type { Message } from "@/types/message"
 import type { LayoutConfig, LayoutTheme } from "@/types/layout"
 import { ChatLayout } from "@/components/layout/ChatLayout"
 import { Button } from "@/components/ui/button"
@@ -31,6 +32,7 @@ interface ConversationViewportProps {
   className?: string
   scrollClassName?: string
   fitToFrame?: boolean
+  onImageActivate?: (message: Message) => void
 }
 
 export const ConversationViewport = ({
@@ -47,6 +49,7 @@ export const ConversationViewport = ({
   className,
   scrollClassName,
   fitToFrame = false,
+  onImageActivate,
 }: ConversationViewportProps) => {
   const {
     containerRef,
@@ -82,6 +85,7 @@ export const ConversationViewport = ({
         conversationMode="scroll"
         conversationContainerRef={conversationContainerRef}
         conversationContentRef={conversationContentRef}
+        onImageActivate={onImageActivate}
       />
     </div>
   )

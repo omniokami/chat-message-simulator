@@ -17,6 +17,7 @@ interface MessageBubbleProps {
   isGroup: boolean
   spoilerBlur: number
   showAvatar?: boolean
+  onImageActivate?: (message: Message) => void
 }
 
 const ErrorStatusIcon = ({ className }: { className?: string }) => (
@@ -84,6 +85,7 @@ export const MessageBubble = ({
   isGroup,
   spoilerBlur,
   showAvatar,
+  onImageActivate,
 }: MessageBubbleProps) => {
   const isWhatsApp = layout.id === "whatsapp"
   const isIMessage = layout.id === "imessage"
@@ -154,6 +156,7 @@ export const MessageBubble = ({
     source?: string
     url?: string
   }>({})
+  const canActivateImage = Boolean(message.type === "image" && message.imageUrl && !isSpoilerCovered && onImageActivate)
   const showBubbleSideError = showInstagramError || showIMessageError
   const showMessengerAvatar = isMessenger && !isOwn && Boolean(showAvatar)
   const showInstagramAvatar = isInstagram && !isOwn && Boolean(showAvatar)
@@ -367,14 +370,23 @@ export const MessageBubble = ({
             <div
               className={cn(
                 "relative w-fit max-w-[240px] overflow-hidden border border-white/20",
-                isSpoilerCovered && "cursor-pointer",
+                (isSpoilerCovered || canActivateImage) && "cursor-pointer",
                 imageRadius,
               )}
               data-image-spoiler={showSpoiler ? "true" : undefined}
               data-export-spoiler={showSpoiler ? String(shouldExportSpoiler) : undefined}
               data-spoiler-blur={showSpoiler ? resolvedSpoilerBlur : undefined}
               style={imageFrameStyle}
-              onClick={isSpoilerCovered ? () => setSpoilerRevealed(true) : undefined}
+              onClick={() => {
+                if (isSpoilerCovered) {
+                  setSpoilerRevealed(true)
+                  return
+                }
+
+                if (canActivateImage) {
+                  onImageActivate?.(message)
+                }
+              }}
               onPointerDown={(event) => {
                 if (event.button === 2) {
                   prepareImageObjectUrl(true)
@@ -382,17 +394,29 @@ export const MessageBubble = ({
               }}
               onContextMenu={() => prepareImageObjectUrl(true)}
               onKeyDown={
-                isSpoilerCovered
+                isSpoilerCovered || canActivateImage
                   ? (event) => {
                       if (event.key !== "Enter" && event.key !== " ") return
                       event.preventDefault()
-                      setSpoilerRevealed(true)
+
+                      if (isSpoilerCovered) {
+                        setSpoilerRevealed(true)
+                        return
+                      }
+
+                      onImageActivate?.(message)
                     }
                   : undefined
               }
-              role={isSpoilerCovered ? "button" : undefined}
-              tabIndex={isSpoilerCovered ? 0 : undefined}
-              aria-label={isSpoilerCovered ? "Reveal spoiler image" : undefined}
+              role={isSpoilerCovered || canActivateImage ? "button" : undefined}
+              tabIndex={isSpoilerCovered || canActivateImage ? 0 : undefined}
+              aria-label={
+                isSpoilerCovered
+                  ? "Reveal spoiler image"
+                  : canActivateImage
+                    ? "Open image viewer"
+                    : undefined
+              }
             >
               <img
                 ref={imageRef}
