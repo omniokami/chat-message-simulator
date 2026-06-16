@@ -20,6 +20,7 @@ export interface ExportSettings {
   quality: number
   captureMode: ExportCaptureMode
   revealImageSpoilers: boolean
+  showSpoilerIconOnRevealedImages: boolean
 }
 
 export interface ConversationWithAppearance {
@@ -285,6 +286,7 @@ const defaultExportSettings: ExportSettings = {
   quality: 0.95,
   captureMode: "viewport",
   revealImageSpoilers: false,
+  showSpoilerIconOnRevealedImages: true,
 }
 
 const defaultUiState: UiState = {

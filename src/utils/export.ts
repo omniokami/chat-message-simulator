@@ -28,7 +28,7 @@ interface ExportRenderOptions {
   }>
 }
 
-const applyExportSpoilerState = (clone: HTMLElement, revealImageSpoilers: boolean) => {
+const applyExportSpoilerState = (clone: HTMLElement, revealImageSpoilers: boolean, showSpoilerIconOnRevealedImages: boolean) => {
   const spoilerFrames = Array.from(
     clone.querySelectorAll<HTMLElement>('[data-image-spoiler="true"]'),
   )
@@ -69,9 +69,13 @@ const applyExportSpoilerState = (clone: HTMLElement, revealImageSpoilers: boolea
     coverOverlay?.remove()
     exportOverlay?.remove()
     if (exportCorner) {
-      exportCorner.classList.remove("hidden")
-      exportCorner.classList.add("flex")
-      exportCorner.style.display = ""
+      if (showSpoilerIconOnRevealedImages) {
+        exportCorner.classList.remove("hidden")
+        exportCorner.classList.add("flex")
+        exportCorner.style.display = ""
+      } else {
+        exportCorner?.remove()
+      }
     }
   })
 }
@@ -131,7 +135,7 @@ const buildExportClone = (
   const clone = node.cloneNode(true) as HTMLElement
   wrapper.appendChild(clone)
   document.body.appendChild(wrapper)
-  applyExportSpoilerState(clone, settings.revealImageSpoilers)
+  applyExportSpoilerState(clone, settings.revealImageSpoilers, settings.showSpoilerIconOnRevealedImages)
 
   const sourceScrollRoots = Array.from(
     node.querySelectorAll<HTMLElement>('[data-conversation-scroll-root="true"]'),
