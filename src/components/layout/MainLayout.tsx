@@ -589,206 +589,221 @@ export const MainLayout = () => {
                 ) : null}
               </CardContent>
             </Card>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <div className="flex items-center gap-3 rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--card))]/85 px-4 py-2 shadow-sm backdrop-blur">
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="font-medium text-[hsl(var(--muted-foreground))]">Theme</span>
+                </div>
+                <Sun
+                  className={cn(
+                    "h-4 w-4 transition-colors",
+                    isEditorDark ? "text-[hsl(var(--muted-foreground))]" : "text-[hsl(var(--foreground))]",
+                  )}
+                />
+                <Switch
+                  checked={isEditorDark}
+                  onCheckedChange={(checked) => setEditorTheme(checked ? "dark" : "light")}
+                  aria-label="Toggle workspace theme"
+                />
+                <div className="flex items-center gap-2 text-xs">
+                  <Moon
+                    className={cn(
+                      "h-4 w-4 transition-colors",
+                      isEditorDark ? "text-[hsl(var(--foreground))]" : "text-[hsl(var(--muted-foreground))]",
+                    )}
+                  />
+                  <span className="font-medium text-[hsl(var(--muted-foreground))]">{isEditorDark ? "Dark" : "Light"}</span>
+                </div>
+              </div>
+              <Button variant="ghost" size="sm" asChild>
+                <a href="https://github.com/omniokami/chat-message-simulator" target="_blank" rel="noreferrer">
+                  GitHub
+                </a>
+              </Button>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    Terms and Conditions
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Terms and Conditions</DialogTitle>
+                    <DialogDescription>By using this app, you agree to these terms.</DialogDescription>
+                    <div className="text-xs text-[hsl(var(--muted-foreground))]">Last updated: 2026-01-03 | Version: 2026-01-03</div>
+                  </DialogHeader>
+                  <div className="space-y-4 text-sm text-[hsl(var(--muted-foreground))]">
+                    <div className="space-y-2">
+                      <div className="text-sm font-semibold text-[hsl(var(--foreground))]">
+                        What this app does
+                      </div>
+                      <p>
+                        This app lets you compose chat mockups, preview layouts, and export
+                        images. All processing happens in your browser.
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="text-sm font-semibold text-[hsl(var(--foreground))]">
+                        Data handling and GDPR
+                      </div>
+                      <p>
+                        We do not collect, store, or process personal data on our servers. Your
+                        edits and autosaves stay in your browser&apos;s local storage. You can
+                        delete them using Clear or by clearing site data in your browser.
+                      </p>
+                      <p>
+                        We do not run analytics or tracking cookies. Because your content does not
+                        leave your device, there is no server-side data controller or processor
+                        for your content. If you contact us, we will only use your email to
+                        respond.
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="text-sm font-semibold text-[hsl(var(--foreground))]">
+                        Third-party resources
+                      </div>
+                      <p>
+                        The app may load fonts or user-provided remote images from third-party
+                        providers. Those providers may receive standard request data such as IP
+                        address and user agent. You can replace assets or block network requests
+                        if needed.
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="text-sm font-semibold text-[hsl(var(--foreground))]">
+                        Your content
+                      </div>
+                      <p>
+                        You are responsible for the content you enter and export. Do not include
+                        sensitive data unless you are comfortable storing it locally. Only use
+                        content and assets you have the rights to use.
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="text-sm font-semibold text-[hsl(var(--foreground))]">
+                        No warranties
+                      </div>
+                      <p>
+                        The app is provided &quot;as is&quot; and &quot;as available&quot;
+                        without any warranties, express or implied, including accuracy,
+                        reliability, availability, or fitness for a particular purpose. Use the
+                        app at your own risk.
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="text-sm font-semibold text-[hsl(var(--foreground))]">
+                        Limitation of liability
+                      </div>
+                      <p>
+                        To the maximum extent permitted by law, we are not liable for any
+                        indirect, incidental, special, consequential, or punitive damages, or any
+                        loss of data, profits, or business interruption. Our total liability is
+                        limited to the amount you paid for the app, which is zero.
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="text-sm font-semibold text-[hsl(var(--foreground))]">
+                        Governing law
+                      </div>
+                      <p>
+                        These terms are governed by the laws of Romania. Any disputes are subject
+                        to the exclusive jurisdiction of the courts in Romania.
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="text-sm font-semibold text-[hsl(var(--foreground))]">
+                        Contact
+                      </div>
+                      <p>Questions about these terms or GDPR? Email: queadx@gmail.com</p>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="text-sm font-semibold text-[hsl(var(--foreground))]">
+                        Changes
+                      </div>
+                      <p>
+                        We may update these terms from time to time. Continued use means you
+                        accept the updated terms.
+                      </p>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    Privacy Policy
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Privacy Policy</DialogTitle>
+                    <DialogDescription>
+                      This policy explains how data is handled in the app.
+                    </DialogDescription>
+                    <div className="text-xs text-[hsl(var(--muted-foreground))]">Last updated: 2026-01-03 | Version: 2026-01-03</div>
+                  </DialogHeader>
+                  <div className="space-y-4 text-sm text-[hsl(var(--muted-foreground))]">
+                    <div className="space-y-2">
+                      <div className="text-sm font-semibold text-[hsl(var(--foreground))]">
+                        Data we collect
+                      </div>
+                      <p>
+                        We do not collect or store your chat content on our servers. Everything
+                        you create stays on your device.
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="text-sm font-semibold text-[hsl(var(--foreground))]">
+                        Local storage
+                      </div>
+                      <p>
+                        The app uses your browser&apos;s local storage to keep autosaves and
+                        settings. You can remove this data with Clear or by clearing site data in
+                        your browser.
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="text-sm font-semibold text-[hsl(var(--foreground))]">
+                        Third-party requests
+                      </div>
+                      <p>
+                        Fonts and user-provided remote images may be loaded from third-party
+                        services. Those providers may receive standard request data such as IP
+                        address and user agent. You can block or replace these resources if
+                        needed.
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="text-sm font-semibold text-[hsl(var(--foreground))]">
+                        GDPR readiness
+                      </div>
+                      <p>
+                        Because your content does not leave your device, there is no server-side
+                        processing of personal data for the app. If you contact us, we only use
+                        your email to respond and do not share it.
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="text-sm font-semibold text-[hsl(var(--foreground))]">
+                        Contact
+                      </div>
+                      <p>Privacy questions? Email: queadx@gmail.com</p>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="text-sm font-semibold text-[hsl(var(--foreground))]">
+                        Changes
+                      </div>
+                      <p>
+                        We may update this policy from time to time. Continued use means you
+                        accept the updated policy.
+                      </p>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
           </main>
-        </div>
-
-        <div className="flex flex-wrap items-center justify-center gap-3">
-          <div className="flex items-center gap-3 rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--card))]/85 px-4 py-2 shadow-sm backdrop-blur">
-            <div className="flex items-center gap-2 text-xs">
-              <span className="font-medium text-[hsl(var(--muted-foreground))]">
-                Theme
-              </span>
-            </div>
-            <Sun
-                className={cn(
-                  "h-4 w-4 transition-colors",
-                  isEditorDark
-                    ? "text-[hsl(var(--muted-foreground))]"
-                    : "text-[hsl(var(--foreground))]",
-                )}
-              />
-            <Switch
-              checked={isEditorDark}
-              onCheckedChange={(checked) => setEditorTheme(checked ? "dark" : "light")}
-              aria-label="Toggle workspace theme"
-            />
-            <div className="flex items-center gap-2 text-xs">
-              <Moon
-                className={cn(
-                  "h-4 w-4 transition-colors",
-                  isEditorDark
-                    ? "text-[hsl(var(--foreground))]"
-                    : "text-[hsl(var(--muted-foreground))]",
-                )}
-              />
-              <span className="font-medium text-[hsl(var(--muted-foreground))]">
-                {isEditorDark ? "Dark" : "Light"}
-              </span>
-            </div>
-          </div>
-          <Button variant="ghost" size="sm" asChild>
-            <a
-              href="https://github.com/omniokami/chat-message-simulator"
-              target="_blank"
-              rel="noreferrer"
-            >
-              GitHub
-            </a>
-          </Button>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="ghost" size="sm">
-                Terms and Conditions
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Terms and Conditions</DialogTitle>
-                <DialogDescription>
-                  By using this app, you agree to these terms.
-                </DialogDescription>
-                <div className="text-xs text-[hsl(var(--muted-foreground))]">Last updated: 2026-01-03 | Version: 2026-01-03</div>
-              </DialogHeader>
-              <div className="space-y-4 text-sm text-[hsl(var(--muted-foreground))]">
-                <div className="space-y-2">
-                  <div className="text-sm font-semibold text-[hsl(var(--foreground))]">What this app does</div>
-                  <p>
-                    This app lets you compose chat mockups, preview layouts, and export images.
-                    All processing happens in your browser.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <div className="text-sm font-semibold text-[hsl(var(--foreground))]">Data handling and GDPR</div>
-                  <p>
-                    We do not collect, store, or process personal data on our servers. Your edits
-                    and autosaves stay in your browser&apos;s local storage. You can delete them
-                    using Clear or by clearing site data in your browser.
-                  </p>
-                  <p>
-                    We do not run analytics or tracking cookies. Because your content does not
-                    leave your device, there is no server-side data controller or processor for
-                    your content. If you contact us, we will only use your email to respond.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <div className="text-sm font-semibold text-[hsl(var(--foreground))]">Third-party resources</div>
-                  <p>
-                    The app may load fonts or user-provided remote images from third-party
-                    providers. Those providers may receive standard request data such as IP
-                    address and user agent. You can replace assets or block network requests if
-                    needed.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <div className="text-sm font-semibold text-[hsl(var(--foreground))]">Your content</div>
-                  <p>
-                    You are responsible for the content you enter and export. Do not include
-                    sensitive data unless you are comfortable storing it locally. Only use content
-                    and assets you have the rights to use.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <div className="text-sm font-semibold text-[hsl(var(--foreground))]">No warranties</div>
-                  <p>
-                    The app is provided &quot;as is&quot; and &quot;as available&quot; without any
-                    warranties, express or implied, including accuracy, reliability, availability,
-                    or fitness for a particular purpose. Use the app at your own risk.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <div className="text-sm font-semibold text-[hsl(var(--foreground))]">Limitation of liability</div>
-                  <p>
-                    To the maximum extent permitted by law, we are not liable for any indirect,
-                    incidental, special, consequential, or punitive damages, or any loss of data,
-                    profits, or business interruption. Our total liability is limited to the
-                    amount you paid for the app, which is zero.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <div className="text-sm font-semibold text-[hsl(var(--foreground))]">Governing law</div>
-                  <p>
-                    These terms are governed by the laws of Romania. Any disputes are subject to
-                    the exclusive jurisdiction of the courts in Romania.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <div className="text-sm font-semibold text-[hsl(var(--foreground))]">Contact</div>
-                  <p>
-                    Questions about these terms or GDPR? Email: queadx@gmail.com
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <div className="text-sm font-semibold text-[hsl(var(--foreground))]">Changes</div>
-                  <p>
-                    We may update these terms from time to time. Continued use means you accept
-                    the updated terms.
-                  </p>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="ghost" size="sm">
-                Privacy Policy
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Privacy Policy</DialogTitle>
-                <DialogDescription>
-                  This policy explains how data is handled in the app.
-                </DialogDescription>
-                <div className="text-xs text-[hsl(var(--muted-foreground))]">Last updated: 2026-01-03 | Version: 2026-01-03</div>
-              </DialogHeader>
-              <div className="space-y-4 text-sm text-[hsl(var(--muted-foreground))]">
-                <div className="space-y-2">
-                  <div className="text-sm font-semibold text-[hsl(var(--foreground))]">Data we collect</div>
-                  <p>
-                    We do not collect or store your chat content on our servers. Everything you
-                    create stays on your device.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <div className="text-sm font-semibold text-[hsl(var(--foreground))]">Local storage</div>
-                  <p>
-                    The app uses your browser&apos;s local storage to keep autosaves and settings.
-                    You can remove this data with Clear or by clearing site data in your browser.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <div className="text-sm font-semibold text-[hsl(var(--foreground))]">Third-party requests</div>
-                  <p>
-                    Fonts and user-provided remote images may be loaded from third-party services.
-                    Those providers may receive standard request data such as IP address and user
-                    agent. You can block or replace these resources if needed.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <div className="text-sm font-semibold text-[hsl(var(--foreground))]">GDPR readiness</div>
-                  <p>
-                    Because your content does not leave your device, there is no server-side
-                    processing of personal data for the app. If you contact us, we only use your
-                    email to respond and do not share it.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <div className="text-sm font-semibold text-[hsl(var(--foreground))]">Contact</div>
-                  <p>
-                    Privacy questions? Email: queadx@gmail.com
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <div className="text-sm font-semibold text-[hsl(var(--foreground))]">Changes</div>
-                  <p>
-                    We may update this policy from time to time. Continued use means you accept
-                    the updated policy.
-                  </p>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
         </div>
       </div>
       <ReaderMode
