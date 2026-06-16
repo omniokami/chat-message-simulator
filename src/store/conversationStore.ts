@@ -82,7 +82,9 @@ interface ConversationStore {
   }) => void
   updateMessage: (messageId: string, updates: Partial<Message>) => void
   deleteMessage: (messageId: string) => void
-  duplicateMessage: (messageId: string) => void
+  duplicateMessageEnd: (messageId: string) => void
+  duplicateMessageStart: (messageId: string) => void
+  duplicateMessageNext: (messageId: string) => void
   setMessages: (messages: Message[]) => void
   setConversationEditorState: (updates: Partial<ConversationEditorState>) => void
   setExportSettings: (settings: Partial<ExportSettings>) => void
@@ -453,19 +455,80 @@ export const useConversationStore = create<ConversationStore>()(
           },
           history: pushHistory(state),
         })),
-      duplicateMessage: (messageId) =>
+      duplicateMessageEnd: (messageId) =>
         set((state) => {
           const message = state.conversation.messages.find((entry) => entry.id === messageId)
           if (!message) return state
+          const lastMessage = state.conversation.messages[state.conversation.messages.length - 1]
+          const shouldPreserveNaturalTime =
+            state.conversation.editorState?.preserveNaturalTime ?? defaultConversationEditorState.preserveNaturalTime
+          const nextTimestamp =
+            shouldPreserveNaturalTime && lastMessage
+              ? lastMessage.timestamp
+              : new Date().toISOString()
           const copy: Message = {
             ...message,
             id: generateId(),
-            timestamp: new Date().toISOString(),
+            timestamp: nextTimestamp,
           }
           return {
             conversation: {
               ...state.conversation,
               messages: [...state.conversation.messages, copy],
+              metadata: {
+                ...state.conversation.metadata,
+                updatedAt: new Date().toISOString(),
+              },
+            },
+            history: pushHistory(state),
+          }
+        }),
+      duplicateMessageStart: (messageId) =>
+        set((state) => {
+          const message = state.conversation.messages.find((entry) => entry.id === messageId)
+          if (!message) return state
+          const firstMessage = state.conversation.messages[0]
+          const shouldPreserveNaturalTime =
+            state.conversation.editorState?.preserveNaturalTime ??
+            defaultConversationEditorState.preserveNaturalTime
+          const nextTimestamp =
+            shouldPreserveNaturalTime && firstMessage
+              ? firstMessage.timestamp
+              : new Date().toISOString()
+          const copy: Message = {
+            ...message,
+            id: generateId(),
+            timestamp: nextTimestamp,
+          }
+          return {
+            conversation: {
+              ...state.conversation,
+              messages: [copy, ...state.conversation.messages],
+              metadata: {
+                ...state.conversation.metadata,
+                updatedAt: new Date().toISOString(),
+              },
+            },
+            history: pushHistory(state),
+          }
+        }),
+      duplicateMessageNext: (messageId) =>
+        set((state) => {
+          const messageIndex = state.conversation.messages.findIndex((entry) => entry.id === messageId)
+          if (messageIndex === -1) return state
+          const message = state.conversation.messages[messageIndex]
+          const copy: Message = {
+            ...message,
+            id: generateId(),
+          }
+          return {
+            conversation: {
+              ...state.conversation,
+              messages: [
+                ...state.conversation.messages.slice(0, messageIndex + 1),
+                copy,
+                ...state.conversation.messages.slice(messageIndex + 1),
+              ],
               metadata: {
                 ...state.conversation.metadata,
                 updatedAt: new Date().toISOString(),

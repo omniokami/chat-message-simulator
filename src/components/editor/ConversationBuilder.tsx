@@ -17,6 +17,9 @@ import { CSS, type Transform } from "@dnd-kit/utilities"
 import {
   ArrowDown,
   ArrowUp,
+  ChevronDown,
+  ChevronUp,
+  ClockArrowUp,
   Copy,
   Eye,
   EyeOff,
@@ -44,6 +47,17 @@ const toDateTimeInputValue = (iso: string) => {
   const offset = date.getTimezoneOffset() * 60000
   return new Date(date.getTime() - offset).toISOString().slice(0, 16)
 }
+
+const DirectionalCopyIcon = ({ direction }: { direction: "up" | "down" }) => (
+  <span className="relative h-4 w-4">
+    <Copy className="h-4 w-4" />
+    {direction === "up" ? (
+      <ChevronUp className="absolute top-[6px] right-[1.5px] h-2 w-2" strokeWidth={5.0} />
+    ) : (
+      <ChevronDown className="absolute bottom-[2px] right-[1.5px] h-2 w-2" strokeWidth={5.0} />
+    )}
+  </span>
+)
 
 const MessageRow = ({
   message,
@@ -138,7 +152,9 @@ export const ConversationBuilder = () => {
   const addMessage = useConversationStore((state) => state.addMessage)
   const updateMessage = useConversationStore((state) => state.updateMessage)
   const deleteMessage = useConversationStore((state) => state.deleteMessage)
-  const duplicateMessage = useConversationStore((state) => state.duplicateMessage)
+  const duplicateMessageEnd = useConversationStore((state) => state.duplicateMessageEnd)
+  const duplicateMessageStart = useConversationStore((state) => state.duplicateMessageStart)
+  const duplicateMessageNext = useConversationStore((state) => state.duplicateMessageNext)
   const setMessages = useConversationStore((state) => state.setMessages)
   const globalDateInput = useConversationStore(
     (state) => state.conversation.editorState?.globalDateTime ?? "",
@@ -398,6 +414,22 @@ export const ConversationBuilder = () => {
     showToast("Applied natural time across the whole conversation.")
   }
 
+  const applyMessageTimeToNextMessages = (messageId: string) => {
+    const messageIndex = messages.findIndex((message) => message.id === messageId)
+    if (messageIndex === -1) return
+
+    const anchorTimestamp = messages[messageIndex].timestamp
+    if (Number.isNaN(new Date(anchorTimestamp).getTime())) return
+
+    setMessages(
+      messages.map((message, index) =>
+        index > messageIndex ? { ...message, timestamp: anchorTimestamp } : message,
+      ),
+    )
+    setOpenActionsId(null)
+    showToast("Applied this time to all later messages.")
+  }
+
   const hasHidden = messages.some((message) => message.isHidden)
   const hasVisible = messages.some((message) => !message.isHidden)
   const activeParticipant = participants.find((participant) => participant.id === activeParticipantId)
@@ -601,7 +633,7 @@ export const ConversationBuilder = () => {
                               updateMessage(message.id, { isHidden: !message.isHidden })
                             }
                             onDuplicate={() => {
-                              duplicateMessage(message.id)
+                              duplicateMessageEnd(message.id)
                               setOpenActionsId(null)
                             }}
                             onDelete={() => {
@@ -644,18 +676,48 @@ export const ConversationBuilder = () => {
                                 }}
                               >
                                 {message.isHidden ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                                {message.isHidden ? "Show in chat" : "Hide from chat"}
+                                {message.isHidden ? "Show" : "Hide"}
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => {
-                                  duplicateMessage(message.id)
+                                  duplicateMessageNext(message.id)
                                   setOpenActionsId(null)
                                 }}
                               >
                                 <Copy className="h-4 w-4" />
                                 Duplicate
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => applyMessageTimeToNextMessages(message.id)}
+                              >
+                                <ClockArrowUp className="h-4 w-4" />
+                                Time
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  duplicateMessageStart(message.id)
+                                  setOpenActionsId(null)
+                                }}
+                              >
+                                <DirectionalCopyIcon direction="up" />
+                                Dupe to start
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  duplicateMessageEnd(message.id)
+                                  setOpenActionsId(null)
+                                }}
+                              >
+                                <DirectionalCopyIcon direction="down" />
+                                Dupe to end
                               </Button>
                               <Button
                                 variant="ghost"

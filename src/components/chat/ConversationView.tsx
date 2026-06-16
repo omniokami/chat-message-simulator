@@ -52,7 +52,7 @@ export const ConversationView = ({
         : "bg-white/20 text-[var(--chat-muted)]",
   )
   const systemMessageClass = cn(
-    "mx-auto max-w-[70%] rounded-full px-4 py-2 text-center text-xs",
+    "mx-auto max-w-[70%] whitespace-pre-wrap break-words rounded-full px-4 py-2 text-center text-xs",
     isWhatsApp
       ? "bg-white/70 text-[#54656f] shadow-[0_1px_0_rgba(0,0,0,0.08)]"
       : isSnapchat
