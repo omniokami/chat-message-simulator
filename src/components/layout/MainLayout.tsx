@@ -333,7 +333,7 @@ export const MainLayout = () => {
                   <ConversationViewportControls
                     showChrome={ui.showChrome}
                     zoom={ui.zoom}
-                    hasOverflow={conversationMetrics.hasOverflow}
+                    hasLongConversation={previewViewport.hasLongConversation}
                     onToggleChrome={() => setUi({ showChrome: !ui.showChrome })}
                     onZoomChange={(zoom) => setUi({ zoom })}
                     onResetZoom={() => setUi({ zoom: 1 })}
@@ -353,7 +353,7 @@ export const MainLayout = () => {
                   height={resolvedExportHeight}
                   suffix={exportSettings.captureMode === "full" ? "all messages" : undefined}
                 />
-                {conversationMetrics.hasOverflow ? (
+                {previewViewport.hasLongConversation ? (
                   <div className="rounded-2xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-xs text-amber-100">
                     <div className="space-y-1">
                       <div className="font-semibold">
@@ -786,7 +786,11 @@ export const MainLayout = () => {
           </Dialog>
         </div>
       </div>
-      <ReaderMode open={isReaderOpen} onOpenChange={setIsReaderOpen} />
+      <ReaderMode
+        open={isReaderOpen}
+        onOpenChange={setIsReaderOpen}
+        hasLongConversation={previewViewport.hasLongConversation}
+      />
       <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 lg:hidden">
         <div className="rounded-[1.4rem] border border-[hsl(var(--border))] bg-[hsl(var(--card))]/90 p-1 shadow-lg backdrop-blur">
           <div

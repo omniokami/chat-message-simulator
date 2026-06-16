@@ -13,6 +13,7 @@ interface UseConversationViewportOptions {
   height: number
   zoom: number
   autoFit: boolean
+  maxFitScale?: number
   measurementKey?: string
 }
 
@@ -26,6 +27,7 @@ export interface ConversationViewportState {
   appliedScale: number
   scaledWidth: number
   scaledHeight: number
+  hasLongConversation: boolean
   screenScrollTops: number[]
   screenCount: number
   getViewportOffset: () => { x: number; y: number }
@@ -44,6 +46,7 @@ export const useConversationViewport = ({
   height,
   zoom,
   autoFit,
+  maxFitScale = 1,
   measurementKey,
 }: UseConversationViewportOptions): ConversationViewportState => {
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -70,7 +73,7 @@ export const useConversationViewport = ({
       if (!availableWidth || !availableHeight) return
       const scaleX = availableWidth / width
       const scaleY = availableHeight / height
-      const nextScale = Math.min(scaleX, scaleY, 1)
+      const nextScale = Math.min(scaleX, scaleY, maxFitScale)
       setFitScale(nextScale > 0 ? nextScale : 1)
     }
 
@@ -81,7 +84,7 @@ export const useConversationViewport = ({
       cancelAnimationFrame(raf)
       observer.disconnect()
     }
-  }, [height, width, autoFit, measurementKey])
+  }, [height, width, autoFit, maxFitScale, measurementKey])
 
   useEffect(() => {
     const container = conversationContainerRef.current
@@ -172,6 +175,7 @@ export const useConversationViewport = ({
     }
     return positions
   }, [metrics.contentHeight, metrics.viewportHeight])
+  const hasLongConversation = screenScrollTops.length > 1
 
   const getViewportOffset = useCallback(() => {
     const scrollElement = scrollRef.current
@@ -216,6 +220,7 @@ export const useConversationViewport = ({
     appliedScale,
     scaledWidth,
     scaledHeight,
+    hasLongConversation,
     screenScrollTops,
     screenCount: Math.max(screenScrollTops.length, 1),
     getViewportOffset,

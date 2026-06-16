@@ -120,7 +120,7 @@ export const ConversationViewport = ({
 interface ConversationViewportControlsProps {
   showChrome: boolean
   zoom: number
-  hasOverflow: boolean
+  hasLongConversation: boolean
   onToggleChrome: () => void
   onZoomChange: (zoom: number) => void
   onResetZoom: () => void
@@ -132,7 +132,7 @@ interface ConversationViewportControlsProps {
 export const ConversationViewportControls = ({
   showChrome,
   zoom,
-  hasOverflow,
+  hasLongConversation,
   onToggleChrome,
   onZoomChange,
   onResetZoom,
@@ -176,7 +176,7 @@ export const ConversationViewportControls = ({
         {showChrome ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
         <span className="hidden sm:inline">{showChrome ? "Hide chrome" : "Show chrome"}</span>
       </Button>
-      {hasOverflow ? (
+      {hasLongConversation ? (
         <>
           <Button variant="outline" size="sm" onClick={() => onJump("top")}>
             <ArrowUpToLine className="h-4 w-4" />

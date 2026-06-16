@@ -20,11 +20,13 @@ import { readJsonFile } from "@/utils/storage"
 interface ReaderModeProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  hasLongConversation?: boolean
 }
 
 const READER_DEFAULT_ZOOM = 1
+const READER_MAX_FIT_SCALE = 1.5
 
-export const ReaderMode = ({ open, onOpenChange }: ReaderModeProps) => {
+export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderModeProps) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [readerZoom, setReaderZoom] = useState(READER_DEFAULT_ZOOM)
@@ -70,8 +72,10 @@ export const ReaderMode = ({ open, onOpenChange }: ReaderModeProps) => {
     height: exportSettings.height,
     zoom: readerZoom,
     autoFit: ui.autoFit,
+    maxFitScale: READER_MAX_FIT_SCALE,
     measurementKey,
   })
+  const shouldShowJumpControls = hasLongConversation ?? readerViewport.hasLongConversation
 
   const enterEditMode = () => {
     setUi({ activeView: "editor", isSidebarOpen: true })
@@ -86,7 +90,7 @@ export const ReaderMode = ({ open, onOpenChange }: ReaderModeProps) => {
           Fullscreen conversation reader.
         </DialogDescription>
         <div className="flex h-full min-h-0 flex-col bg-[hsl(var(--background))] text-[hsl(var(--foreground))]">
-          <header className="flex shrink-0 flex-col gap-3 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))]/95 px-4 py-3 pr-14 shadow-sm backdrop-blur lg:flex-row lg:items-center lg:justify-between">
+          <header className="flex shrink-0 flex-col gap-2 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))]/95 px-3 py-2 pr-12 shadow-sm backdrop-blur lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0 space-y-1">
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <BookOpen className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
@@ -105,7 +109,7 @@ export const ReaderMode = ({ open, onOpenChange }: ReaderModeProps) => {
               <ConversationViewportControls
                 showChrome={ui.showChrome}
                 zoom={readerZoom}
-                hasOverflow={readerViewport.metrics.hasOverflow}
+                hasLongConversation={shouldShowJumpControls}
                 onToggleChrome={() => setUi({ showChrome: !ui.showChrome })}
                 onZoomChange={setReaderZoom}
                 onResetZoom={() => setReaderZoom(READER_DEFAULT_ZOOM)}
@@ -122,7 +126,7 @@ export const ReaderMode = ({ open, onOpenChange }: ReaderModeProps) => {
                       onClick={() => fileInputRef.current?.click()}
                     >
                       <FileUp className="h-4 w-4" />
-                      <span className="hidden sm:inline">Open JSON</span>
+                      <span className="hidden sm:inline">Load JSON</span>
                     </Button>
                   </>
                 }
@@ -130,7 +134,7 @@ export const ReaderMode = ({ open, onOpenChange }: ReaderModeProps) => {
               />
             </div>
           </header>
-          <main className="min-h-0 flex-1 p-3 sm:p-4">
+          <main className="min-h-0 flex-1">
             <ConversationViewport
               viewport={readerViewport}
               conversation={conversation}
@@ -141,7 +145,7 @@ export const ReaderMode = ({ open, onOpenChange }: ReaderModeProps) => {
               backgroundImageUrl={backgroundImageUrl}
               backgroundImageOpacity={backgroundImageOpacity}
               backgroundColor={backgroundColor}
-              className="h-full rounded-none border-0 bg-[hsl(var(--muted))] sm:rounded-2xl"
+              className="h-full rounded-none border-0 bg-[hsl(var(--background))] p-0"
             />
           </main>
           <input
