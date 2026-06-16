@@ -120,6 +120,10 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
         })),
     [conversation.messages, conversation.participants],
   )
+  const readerImageParticipantIds = useMemo(
+    () => Array.from(new Set(readerImages.map((image) => image.message.senderId))),
+    [readerImages],
+  )
   const visibleMessageCount = conversation.messages.filter((message) => !message.isHidden).length
   const measurementKey = [
     conversation.id,
@@ -159,7 +163,7 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
 
   const openImageViewer = (message: Message) => {
     if (message.type !== "image" || !message.imageUrl) return
-    setEnabledImageParticipantIds([message.senderId])
+    setEnabledImageParticipantIds(readerImageParticipantIds)
     setActiveImageId(message.id)
   }
 
