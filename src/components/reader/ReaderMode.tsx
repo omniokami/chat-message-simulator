@@ -24,7 +24,8 @@ interface ReaderModeProps {
 }
 
 const READER_DEFAULT_ZOOM = 1
-const READER_MAX_FIT_SCALE = 1.5
+const READER_AUTO_FIT = true
+const READER_MAX_FIT_SCALE = 2
 
 export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderModeProps) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -71,7 +72,7 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
     width: exportSettings.width,
     height: exportSettings.height,
     zoom: readerZoom,
-    autoFit: ui.autoFit,
+    autoFit: READER_AUTO_FIT,
     maxFitScale: READER_MAX_FIT_SCALE,
     measurementKey,
   })
@@ -98,7 +99,7 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
               </div>
               <ConversationViewportStatus
                 appliedScale={readerViewport.appliedScale}
-                autoFit={ui.autoFit}
+                autoFit={READER_AUTO_FIT}
                 width={exportSettings.width}
                 height={exportSettings.height}
                 suffix={`${visibleMessageCount} visible messages`}
