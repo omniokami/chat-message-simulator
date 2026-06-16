@@ -249,7 +249,10 @@ export const MessageBubble = ({
       )}
       {isWhatsApp ? (
         <div
-          className="mt-0.5 flex items-center justify-end gap-1 text-[0.6rem] leading-none"
+          className={cn(
+            "mt-0.5 flex items-center justify-end gap-1 text-[0.6rem] leading-none",
+            message.type === "image" && "pr-2"
+          )}
           style={{ color: "var(--chat-muted)" }}
         >
           <span>{formatTimestamp(message.timestamp)}</span>
