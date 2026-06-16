@@ -25,7 +25,7 @@ interface ReaderModeProps {
 
 const READER_DEFAULT_ZOOM = 1
 const READER_AUTO_FIT = true
-const READER_MAX_FIT_SCALE = 2
+const READER_MAX_SCALE = Number.POSITIVE_INFINITY
 
 export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderModeProps) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -46,6 +46,27 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
   useEffect(() => {
     if (open) {
       setReaderZoom(READER_DEFAULT_ZOOM)
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (!open || typeof document === "undefined") return
+
+    const bodyOverflow = document.body.style.overflow
+    const htmlOverflow = document.documentElement.style.overflow
+    const bodyOverscrollBehavior = document.body.style.overscrollBehavior
+    const htmlOverscrollBehavior = document.documentElement.style.overscrollBehavior
+
+    document.body.style.overflow = "hidden"
+    document.documentElement.style.overflow = "hidden"
+    document.body.style.overscrollBehavior = "none"
+    document.documentElement.style.overscrollBehavior = "none"
+
+    return () => {
+      document.body.style.overflow = bodyOverflow
+      document.documentElement.style.overflow = htmlOverflow
+      document.body.style.overscrollBehavior = bodyOverscrollBehavior
+      document.documentElement.style.overscrollBehavior = htmlOverscrollBehavior
     }
   }, [open])
 
@@ -73,7 +94,8 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
     height: exportSettings.height,
     zoom: readerZoom,
     autoFit: READER_AUTO_FIT,
-    maxFitScale: READER_MAX_FIT_SCALE,
+    maxFitScale: READER_MAX_SCALE,
+    maxAppliedScale: READER_MAX_SCALE,
     measurementKey,
   })
   const shouldShowJumpControls = hasLongConversation ?? readerViewport.hasLongConversation
@@ -85,7 +107,7 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="inset-0 left-0 top-0 flex h-svh w-screen max-w-none translate-x-0 translate-y-0 flex-col overflow-hidden rounded-none border-0 bg-[hsl(var(--background))] p-0">
+      <DialogContent className="inset-0 left-0 top-0 flex h-[100dvh] max-h-[100dvh] min-h-0 w-screen max-w-none translate-x-0 translate-y-0 flex-col overflow-hidden rounded-none border-0 bg-[hsl(var(--background))] p-0">
         <DialogTitle className="sr-only">Reader mode</DialogTitle>
         <DialogDescription className="sr-only">
           Fullscreen conversation reader.
@@ -131,11 +153,11 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
                     </Button>
                   </>
                 }
-                className="w-auto"
+                className="w-auto flex-wrap overflow-x-visible pb-0"
               />
             </div>
           </header>
-          <main className="min-h-0 flex-1">
+          <main className="min-h-0 flex-1 overflow-hidden">
             <ConversationViewport
               viewport={readerViewport}
               conversation={conversation}
@@ -147,6 +169,8 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
               backgroundImageOpacity={backgroundImageOpacity}
               backgroundColor={backgroundColor}
               className="h-full rounded-none border-0 bg-[hsl(var(--background))] p-0"
+              scrollClassName="overflow-hidden"
+              fitToFrame
             />
           </main>
           <input

@@ -76,7 +76,7 @@ export const MainLayout = () => {
     const target =
       exportSettings.captureMode === "full"
         ? fullExportRef.current
-        : previewViewport.exportRef.current
+        : previewViewport.exportElementRef.current
     if (!target) return
     if (mode === "preview") {
       setQuickPreviewUrls([])
@@ -312,7 +312,7 @@ export const MainLayout = () => {
                     targetRef={
                       exportSettings.captureMode === "full"
                         ? fullExportRef
-                        : previewViewport.exportRef
+                        : previewViewport.exportElementRef
                     }
                     getExportOffset={
                       exportSettings.captureMode === "full"

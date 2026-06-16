@@ -1,4 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react"
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefCallback,
+  type RefObject,
+} from "react"
 import { clamp } from "@/utils/helpers"
 
 export interface ConversationViewportMetrics {
@@ -14,15 +23,17 @@ interface UseConversationViewportOptions {
   zoom: number
   autoFit: boolean
   maxFitScale?: number
+  maxAppliedScale?: number
   measurementKey?: string
 }
 
 export interface ConversationViewportState {
-  containerRef: RefObject<HTMLDivElement | null>
-  scrollRef: RefObject<HTMLDivElement | null>
-  exportRef: RefObject<HTMLDivElement | null>
-  conversationContainerRef: RefObject<HTMLDivElement | null>
-  conversationContentRef: RefObject<HTMLDivElement | null>
+  containerRef: RefCallback<HTMLDivElement>
+  scrollRef: RefCallback<HTMLDivElement>
+  exportRef: RefCallback<HTMLDivElement>
+  exportElementRef: RefObject<HTMLDivElement | null>
+  conversationContainerRef: RefCallback<HTMLDivElement>
+  conversationContentRef: RefCallback<HTMLDivElement>
   metrics: ConversationViewportMetrics
   appliedScale: number
   scaledWidth: number
@@ -47,49 +58,88 @@ export const useConversationViewport = ({
   zoom,
   autoFit,
   maxFitScale = 1,
+  maxAppliedScale = 2,
   measurementKey,
 }: UseConversationViewportOptions): ConversationViewportState => {
-  const containerRef = useRef<HTMLDivElement | null>(null)
-  const scrollRef = useRef<HTMLDivElement | null>(null)
-  const exportRef = useRef<HTMLDivElement | null>(null)
-  const conversationContainerRef = useRef<HTMLDivElement | null>(null)
-  const conversationContentRef = useRef<HTMLDivElement | null>(null)
+  const containerElementRef = useRef<HTMLDivElement | null>(null)
+  const scrollElementRef = useRef<HTMLDivElement | null>(null)
+  const exportElementRef = useRef<HTMLDivElement | null>(null)
+  const conversationContainerElementRef = useRef<HTMLDivElement | null>(null)
+  const conversationContentElementRef = useRef<HTMLDivElement | null>(null)
+  const [containerElement, setContainerElement] = useState<HTMLDivElement | null>(null)
+  const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null)
+  const [exportElement, setExportElement] = useState<HTMLDivElement | null>(null)
+  const [conversationContainerElement, setConversationContainerElement] =
+    useState<HTMLDivElement | null>(null)
+  const [conversationContentElement, setConversationContentElement] =
+    useState<HTMLDivElement | null>(null)
   const [fitScale, setFitScale] = useState(1)
   const [metrics, setMetrics] = useState<ConversationViewportMetrics>(defaultMetrics)
 
-  useEffect(() => {
-    const element = containerRef.current
+  const containerRef = useCallback<RefCallback<HTMLDivElement>>((node) => {
+    containerElementRef.current = node
+    setContainerElement(node)
+  }, [])
+  const scrollRef = useCallback<RefCallback<HTMLDivElement>>((node) => {
+    scrollElementRef.current = node
+    setScrollElement(node)
+  }, [])
+  const exportRef = useCallback<RefCallback<HTMLDivElement>>((node) => {
+    exportElementRef.current = node
+    setExportElement(node)
+  }, [])
+  const conversationContainerRef = useCallback<RefCallback<HTMLDivElement>>((node) => {
+    conversationContainerElementRef.current = node
+    setConversationContainerElement(node)
+  }, [])
+  const conversationContentRef = useCallback<RefCallback<HTMLDivElement>>((node) => {
+    conversationContentElementRef.current = node
+    setConversationContentElement(node)
+  }, [])
+
+  useLayoutEffect(() => {
+    const element = scrollElement ?? containerElement
     if (!element) return
 
+    let frame = 0
     const updateScale = () => {
+      frame = 0
       const rect = element.getBoundingClientRect()
-      const styles = window.getComputedStyle(element)
-      const paddingX =
-        parseFloat(styles.paddingLeft || "0") + parseFloat(styles.paddingRight || "0")
-      const paddingY =
-        parseFloat(styles.paddingTop || "0") + parseFloat(styles.paddingBottom || "0")
-      const availableWidth = rect.width - paddingX
-      const availableHeight = rect.height - paddingY
+      const availableWidth = element.clientWidth || rect.width
+      const availableHeight = element.clientHeight || rect.height
       if (!availableWidth || !availableHeight) return
       const scaleX = availableWidth / width
       const scaleY = availableHeight / height
       const nextScale = Math.min(scaleX, scaleY, maxFitScale)
       setFitScale(nextScale > 0 ? nextScale : 1)
     }
-
-    const raf = requestAnimationFrame(updateScale)
-    const observer = new ResizeObserver(() => requestAnimationFrame(updateScale))
-    observer.observe(element)
-    return () => {
-      cancelAnimationFrame(raf)
-      observer.disconnect()
+    const scheduleUpdateScale = () => {
+      if (frame) {
+        cancelAnimationFrame(frame)
+      }
+      frame = requestAnimationFrame(updateScale)
     }
-  }, [height, width, autoFit, maxFitScale, measurementKey])
+
+    updateScale()
+    scheduleUpdateScale()
+    const observer = new ResizeObserver(scheduleUpdateScale)
+    observer.observe(element)
+    window.addEventListener("resize", scheduleUpdateScale)
+    window.visualViewport?.addEventListener("resize", scheduleUpdateScale)
+
+    return () => {
+      if (frame) {
+        cancelAnimationFrame(frame)
+      }
+      observer.disconnect()
+      window.removeEventListener("resize", scheduleUpdateScale)
+      window.visualViewport?.removeEventListener("resize", scheduleUpdateScale)
+    }
+  }, [height, width, autoFit, maxFitScale, measurementKey, containerElement, scrollElement])
 
   useEffect(() => {
-    const container = conversationContainerRef.current
-    const content = conversationContentRef.current
-    const exportElement = exportRef.current
+    const container = conversationContainerElement
+    const content = conversationContentElement
     if (!container || !content || !exportElement) return
 
     let frame = 0
@@ -148,9 +198,16 @@ export const useConversationViewport = ({
         image.removeEventListener("error", scheduleMeasure)
       })
     }
-  }, [height, measurementKey, width])
+  }, [
+    conversationContainerElement,
+    conversationContentElement,
+    exportElement,
+    height,
+    measurementKey,
+    width,
+  ])
 
-  const appliedScale = clamp((autoFit ? fitScale : 1) * zoom, 0.1, 2)
+  const appliedScale = clamp((autoFit ? fitScale : 1) * zoom, 0.1, maxAppliedScale)
   const scaledWidth = width * appliedScale
   const scaledHeight = height * appliedScale
 
@@ -178,8 +235,8 @@ export const useConversationViewport = ({
   const hasLongConversation = screenScrollTops.length > 1
 
   const getViewportOffset = useCallback(() => {
-    const scrollElement = scrollRef.current
-    const exportElement = exportRef.current
+    const scrollElement = scrollElementRef.current
+    const exportElement = exportElementRef.current
     if (!scrollElement || !exportElement || appliedScale === 0) {
       return { x: 0, y: 0 }
     }
@@ -202,7 +259,7 @@ export const useConversationViewport = ({
   }, [appliedScale, height, width])
 
   const scrollConversation = useCallback((position: "top" | "bottom") => {
-    const container = conversationContainerRef.current
+    const container = conversationContainerElementRef.current
     if (!container) return
     container.scrollTo({
       top: position === "top" ? 0 : container.scrollHeight,
@@ -214,6 +271,7 @@ export const useConversationViewport = ({
     containerRef,
     scrollRef,
     exportRef,
+    exportElementRef,
     conversationContainerRef,
     conversationContentRef,
     metrics,

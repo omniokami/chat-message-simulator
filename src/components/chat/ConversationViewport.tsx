@@ -29,6 +29,7 @@ interface ConversationViewportProps {
   backgroundColor: string
   className?: string
   scrollClassName?: string
+  fitToFrame?: boolean
 }
 
 export const ConversationViewport = ({
@@ -43,6 +44,7 @@ export const ConversationViewport = ({
   backgroundColor,
   className,
   scrollClassName,
+  fitToFrame = false,
 }: ConversationViewportProps) => {
   const {
     containerRef,
@@ -56,6 +58,30 @@ export const ConversationViewport = ({
   } = viewport
   const frameWidth = scaledWidth / appliedScale
   const frameHeight = scaledHeight / appliedScale
+  const chatFrame = (
+    <div
+      ref={exportRef}
+      className="h-full w-full"
+      style={{
+        width: frameWidth,
+        height: frameHeight,
+      }}
+    >
+      <ChatLayout
+        conversation={conversation}
+        layout={layout}
+        theme={theme}
+        showChrome={showChrome}
+        activeParticipantId={activeParticipantId}
+        backgroundImageUrl={backgroundImageUrl}
+        backgroundImageOpacity={backgroundImageOpacity}
+        backgroundColor={backgroundColor}
+        conversationMode="scroll"
+        conversationContainerRef={conversationContainerRef}
+        conversationContentRef={conversationContentRef}
+      />
+    </div>
+  )
 
   return (
     <div
@@ -68,50 +94,55 @@ export const ConversationViewport = ({
       <div
         ref={scrollRef}
         className={cn(
-          "hide-scrollbar flex h-full w-full items-start justify-start overflow-auto",
+          "hide-scrollbar h-full w-full",
+          fitToFrame
+            ? "relative overflow-hidden"
+            : "flex items-start justify-start overflow-auto",
           scrollClassName,
         )}
       >
-        <div
-          className="relative m-auto"
-          style={{
-            width: scaledWidth,
-            height: scaledHeight,
-          }}
-        >
-          <div
-            className="absolute left-0 top-0"
-            style={{
-              width: frameWidth,
-              height: frameHeight,
-              transform: `scale(${appliedScale})`,
-              transformOrigin: "top left",
-            }}
-          >
+        {fitToFrame ? (
+          <div className="relative h-full w-full overflow-hidden">
             <div
-              ref={exportRef}
-              className="h-full w-full"
+              className="absolute left-1/2 top-1/2"
               style={{
                 width: frameWidth,
                 height: frameHeight,
+                transform: "translate(-50%, -50%)",
               }}
             >
-              <ChatLayout
-                conversation={conversation}
-                layout={layout}
-                theme={theme}
-                showChrome={showChrome}
-                activeParticipantId={activeParticipantId}
-                backgroundImageUrl={backgroundImageUrl}
-                backgroundImageOpacity={backgroundImageOpacity}
-                backgroundColor={backgroundColor}
-                conversationMode="scroll"
-                conversationContainerRef={conversationContainerRef}
-                conversationContentRef={conversationContentRef}
-              />
+              <div
+                className="h-full w-full"
+                style={{
+                  transform: `scale(${appliedScale})`,
+                  transformOrigin: "center",
+                }}
+              >
+                {chatFrame}
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div
+            className="relative m-auto"
+            style={{
+              width: scaledWidth,
+              height: scaledHeight,
+            }}
+          >
+            <div
+              className="absolute left-0 top-0"
+              style={{
+                width: frameWidth,
+                height: frameHeight,
+                transform: `scale(${appliedScale})`,
+                transformOrigin: "top left",
+              }}
+            >
+              {chatFrame}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
