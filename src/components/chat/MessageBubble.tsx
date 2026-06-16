@@ -16,7 +16,7 @@ interface MessageBubbleProps {
   showAvatar?: boolean
 }
 
-const InstagramErrorIcon = ({ className }: { className?: string }) => (
+const ErrorStatusIcon = ({ className }: { className?: string }) => (
   <svg
     aria-hidden="true"
     viewBox="0 0 24 24"
@@ -59,7 +59,13 @@ export const MessageBubble = ({
   const isInstagram = layout.id === "instagram"
   const isTinder = layout.id === "tinder"
   const isError = message.status === "error"
+  const showWhatsAppError = isWhatsApp && isOwn && isError
+  const showIMessageError = isIMessage && isOwn && isError
+  const showMessengerError = isMessenger && isOwn && isError
   const showInstagramError = isInstagram && isOwn && isError
+  const showSnapchatError = isSnapchat && isOwn && isError
+  const showTinderError = isTinder && isOwn && isError
+  const showBubbleSideError = showInstagramError || showIMessageError
   const showMessengerAvatar = isMessenger && !isOwn && Boolean(showAvatar)
   const showInstagramAvatar = isInstagram && !isOwn && Boolean(showAvatar)
   const avatarFallback = (sender?.name || "??").slice(0, 2).toUpperCase()
@@ -95,7 +101,12 @@ export const MessageBubble = ({
                     : "rounded-2xl"
   const bubbleColor = isOwn ? "var(--bubble-sent)" : "var(--bubble-received)"
   const textColor = isOwn ? "var(--bubble-sent-text)" : "var(--bubble-received-text)"
-  const snapBorderColor = isOwn ? "var(--bubble-sent)" : "var(--bubble-received)"
+  const snapBorderColor =
+    isSnapchat && isOwn && isError
+      ? "#ff3b6d"
+      : isOwn
+        ? "var(--bubble-sent)"
+        : "var(--bubble-received)"
   const bubbleStyle: React.CSSProperties & Record<string, string> = {
     backgroundColor: bubbleColor,
     color: textColor,
@@ -182,7 +193,7 @@ export const MessageBubble = ({
         "text-sm shadow-sm",
         message.type === "image" ? "p-1" : "px-3 py-2",
         bubbleRadius,
-        !showInstagramError && bubbleAlignmentClass,
+        !showBubbleSideError && bubbleAlignmentClass,
         instagramIndentClass,
         messengerIndentClass,
         isWhatsApp
@@ -247,9 +258,14 @@ export const MessageBubble = ({
               className={cn(
                 "flex items-center gap-1",
                 message.status === "read" && "text-[#53bdeb]",
+                showWhatsAppError && "text-[#f15c6d]",
               )}
             >
-              {statusIcon(message.status, "h-3 w-3")}
+              {showWhatsAppError ? (
+                <ErrorStatusIcon className="h-[0.8rem] w-[0.8rem]" />
+              ) : (
+                statusIcon(message.status, "h-3 w-3")
+              )}
             </span>
           ) : null}
         </div>
@@ -261,15 +277,43 @@ export const MessageBubble = ({
     <div className="ml-auto flex flex-col gap-1">
       <div className="flex items-center justify-end gap-2">
         {bubbleBody}
-        <InstagramErrorIcon className="h-[1.55rem] w-[1.55rem] shrink-0 text-[#ed4956]" />
+        <ErrorStatusIcon className="h-[1.55rem] w-[1.55rem] shrink-0 text-[#ed4956]" />
       </div>
       <span className="pr-6 text-right text-[0.72rem] font-medium text-[#ed4956]">
         Not delivered.
       </span>
     </div>
+  ) : showIMessageError ? (
+    <div className="ml-auto flex flex-col gap-1">
+      <div className="flex items-center justify-end gap-2">
+        {bubbleBody}
+        <ErrorStatusIcon className="h-[1.35rem] w-[1.35rem] shrink-0 text-[#ff3b30]" />
+      </div>
+      <span className="pr-5 text-right text-[0.72rem] font-medium text-[#ff3b30]">
+        Not Delivered
+      </span>
+    </div>
   ) : (
     bubbleBody
   )
+
+  const errorStatusNote = showMessengerError ? (
+    <div className="flex items-center justify-end gap-1.5 pr-1 text-[0.72rem] font-medium text-[#e04b59]">
+      <ErrorStatusIcon className="h-[0.95rem] w-[0.95rem] shrink-0" />
+      <span>Couldn&apos;t send</span>
+    </div>
+  ) : showSnapchatError ? (
+    <div className="pt-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-[#ff3b6d]">
+      Failed to send
+    </div>
+  ) : showTinderError ? (
+    <div className="flex items-center justify-end">
+      <div className="flex items-center gap-1.5 rounded-full border border-[#e11d48]/20 bg-[#e11d48]/8 px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-[#e11d48]">
+        <ErrorStatusIcon className="h-[0.9rem] w-[0.9rem] shrink-0" />
+        <span>Not sent</span>
+      </div>
+    </div>
+  ) : null
 
   return (
     <div
@@ -336,6 +380,7 @@ export const MessageBubble = ({
       ) : (
         bubbleContent
       )}
+      {errorStatusNote}
       {!isWhatsApp && !isIMessage && !isSnapchat && !isMessenger && !isInstagram && !isTinder ? (
         <div
           className={cn(
