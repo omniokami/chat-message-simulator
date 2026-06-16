@@ -81,6 +81,7 @@ export const ChatLayout = ({
   const subtitle = isGroup
     ? groupStatusLabel(conversation.participants)
     : directStatusLabel(headerParticipant?.status, layout.id)
+  const hasCustomBackgroundImage = Boolean(backgroundImageUrl)
 
   return (
     <div
@@ -110,7 +111,7 @@ export const ChatLayout = ({
         } as React.CSSProperties
       }
     >
-      {backgroundImageUrl ? (
+      {hasCustomBackgroundImage ? (
         <img
           src={backgroundImageUrl}
           alt=""
@@ -119,7 +120,9 @@ export const ChatLayout = ({
           aria-hidden="true"
         />
       ) : null}
-      {theme.pattern ? <div className="chat-layer chat-bg-pattern" aria-hidden="true" /> : null}
+      {theme.pattern && !hasCustomBackgroundImage ? (
+        <div className="chat-layer chat-bg-pattern" aria-hidden="true" />
+      ) : null}
       {showChrome ? (
         <ChatHeader
           title={title}

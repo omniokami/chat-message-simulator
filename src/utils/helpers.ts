@@ -45,10 +45,73 @@ export const getConversationTitle = (conversation: Conversation) => {
   return `${names[0]} & ${names[1]}`
 }
 
-export const readFileAsDataUrl = (file: File): Promise<string> =>
+const PNG_MIME_TYPE = "image/png"
+const WEBP_MIME_TYPE = "image/webp"
+const WEBP_QUALITY = 0.9
+
+const readBlobAsDataUrl = (blob: Blob): Promise<string> =>
   new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = () => resolve(reader.result as string)
     reader.onerror = () => reject(reader.error)
-    reader.readAsDataURL(file)
+    reader.readAsDataURL(blob)
   })
+
+const loadImageFromFile = (file: File): Promise<HTMLImageElement> =>
+  new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file)
+    const image = new Image()
+
+    const cleanup = () => {
+      URL.revokeObjectURL(objectUrl)
+    }
+
+    image.onload = () => {
+      cleanup()
+      resolve(image)
+    }
+    image.onerror = () => {
+      cleanup()
+      reject(new Error("Could not load the selected image."))
+    }
+    image.src = objectUrl
+  })
+
+const convertPngFileToWebpDataUrl = async (file: File): Promise<string | null> => {
+  const image = await loadImageFromFile(file)
+  const width = image.naturalWidth || image.width
+  const height = image.naturalHeight || image.height
+  if (!width || !height) {
+    return null
+  }
+
+  const canvas = document.createElement("canvas")
+  canvas.width = width
+  canvas.height = height
+
+  const context = canvas.getContext("2d")
+  if (!context) {
+    return null
+  }
+
+  context.drawImage(image, 0, 0, width, height)
+
+  const webpDataUrl = canvas.toDataURL(WEBP_MIME_TYPE, WEBP_QUALITY)
+  return webpDataUrl.startsWith(`data:${WEBP_MIME_TYPE}`) ? webpDataUrl : null
+}
+
+export const readFileAsDataUrl = (file: File): Promise<string> =>
+  (async () => {
+    if (file.type === PNG_MIME_TYPE) {
+      try {
+        const converted = await convertPngFileToWebpDataUrl(file)
+        if (converted) {
+          return converted
+        }
+      } catch (error) {
+        console.error("Failed to convert PNG to WebP", error)
+      }
+    }
+
+    return readBlobAsDataUrl(file)
+  })()

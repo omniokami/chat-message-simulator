@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:web-release": "tsc -b && vite build --mode portable && node scripts/inline-web-release.mjs dist-portable",
     "lint": "eslint .",
     "preview": "vite preview"
   },
