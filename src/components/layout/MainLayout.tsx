@@ -135,6 +135,9 @@ export const MainLayout = () => {
   const hasDark = layout.themes.some((themeEntry) => themeEntry.id === "dark")
   const isDark = themeId === "dark"
   const isEditorDark = editorTheme === "dark"
+  const longConversationCalloutClass = isEditorDark
+    ? "border-amber-500/35 bg-amber-500/10 text-amber-100"
+    : "border-amber-200 bg-amber-50 text-amber-950"
   const visibleMessageCount = conversation.messages.filter((message) => !message.isHidden).length
   const previewMeasurementKey = [
     conversation.id,
@@ -238,7 +241,7 @@ export const MainLayout = () => {
           : "bg-[radial-gradient(circle_at_top,_rgba(125,211,252,0.28),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(191,219,254,0.35),_transparent_28%),linear-gradient(180deg,#f8fbff_0%,#f8fafc_45%,#e8eef7_100%)]",
       )}
     >
-      <div className="mx-auto flex flex-col gap-6 px-4 pt-6 pb-24 lg:pb-6">
+      <div className="workspace-stack mx-auto flex flex-col gap-6 px-4 pt-6 pb-24 lg:pb-6">
         <Toolbar />
 
         <Card>
@@ -269,14 +272,16 @@ export const MainLayout = () => {
                       "flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left text-sm transition",
                       isActive
                         ? "border-[hsl(var(--primary))] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm"
-                        : "border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))]",
+                        : "border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--strong-muted-foreground))] hover:border-[hsl(var(--control-border-hover))] hover:bg-[hsl(var(--accent))]",
                     )}
                   >
                     <span
                       className={cn(
                         "flex h-7 w-7 items-center justify-center rounded-lg text-xs font-semibold",
                         isActive
-                          ? "bg-black/10 text-[hsl(var(--primary-foreground))]"
+                          ? isEditorDark
+                            ? "bg-black/10 text-[hsl(var(--primary-foreground))]"
+                            : "bg-white/15 text-[hsl(var(--primary-foreground))]"
                           : "bg-[hsl(var(--accent))] text-[hsl(var(--muted-foreground))]",
                       )}
                     >
@@ -354,12 +359,12 @@ export const MainLayout = () => {
                   suffix={exportSettings.captureMode === "full" ? "all messages" : undefined}
                 />
                 {previewViewport.hasLongConversation ? (
-                  <div className="rounded-2xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-xs text-amber-100">
+                  <div className={cn("rounded-2xl px-4 py-3 text-xs", longConversationCalloutClass)}>
                     <div className="space-y-1">
                       <div className="font-semibold">
                         Long conversation detected: {visibleMessageCount} visible messages
                       </div>
-                      <p className="text-amber-100/80">
+                      <p className={cn(isEditorDark ? "text-amber-100/80" : "text-amber-900/80")}>
                         Scroll inside the phone preview to browse the thread, or use the jump
                         controls above to move between the start and bottom.
                       </p>
@@ -623,7 +628,7 @@ export const MainLayout = () => {
           </div>
           <Button variant="ghost" size="sm" asChild>
             <a
-              href="https://github.com/quead/chat-message-simulator"
+              href="https://github.com/omniokami/chat-message-simulator"
               target="_blank"
               rel="noreferrer"
             >
@@ -792,7 +797,14 @@ export const MainLayout = () => {
         hasLongConversation={previewViewport.hasLongConversation}
       />
       <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 lg:hidden">
-        <div className="rounded-[1.4rem] border border-[hsl(var(--border))] bg-[hsl(var(--card))]/90 p-1 shadow-lg backdrop-blur">
+        <div
+          className={cn(
+            "rounded-[1.4rem] p-1 shadow-lg backdrop-blur",
+            isEditorDark
+              ? "border border-[hsl(var(--border))] bg-[hsl(var(--card))]/90"
+              : "border border-white/70 bg-white/90",
+          )}
+        >
           <div
             role="tablist"
             aria-label="Mobile view mode"

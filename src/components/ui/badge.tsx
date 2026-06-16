@@ -10,8 +10,8 @@ const badgeVariants = cva(
       variant: {
         default: "bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]",
         secondary:
-          "bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]",
-        outline: "border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))]",
+          "bg-[hsl(var(--secondary))] text-[hsl(var(--strong-muted-foreground))]",
+        outline: "border-[hsl(var(--border))] text-[hsl(var(--strong-muted-foreground))]",
       },
     },
     defaultVariants: {
