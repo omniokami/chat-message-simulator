@@ -1,16 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import {
+  BookOpen,
   Download,
-  Eye,
-  EyeOff,
   Image,
   MessagesSquare,
-  Minus,
   Moon,
-  Plus,
-  ScreenShare,
   SlidersHorizontal,
-  SquareStack,
   Sun,
   Users,
 } from "lucide-react"
@@ -23,6 +18,13 @@ import { ParticipantManager } from "@/components/editor/ParticipantManager"
 import { ConversationBuilder } from "@/components/editor/ConversationBuilder"
 import { ExportPanel } from "@/components/export/ExportPanel"
 import { SettingsPanel } from "@/components/layout/SettingsPanel"
+import {
+  ConversationViewport,
+  ConversationViewportControls,
+  ConversationViewportStatus,
+} from "@/components/chat/ConversationViewport"
+import { ReaderMode } from "@/components/reader/ReaderMode"
+import { useConversationViewport } from "@/hooks/useConversationViewport"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { LayoutSelector } from "@/components/layout/LayoutSelector"
@@ -36,7 +38,6 @@ import {
 } from "@/components/ui/dialog"
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/utils/cn"
-import { clamp } from "@/utils/helpers"
 import { exportNodeToImageSequence } from "@/utils/export"
 
 const buildDownloadName = (format: "png" | "jpeg", index?: number) => {
@@ -48,13 +49,7 @@ const buildDownloadName = (format: "png" | "jpeg", index?: number) => {
 }
 
 export const MainLayout = () => {
-  const exportRef = useRef<HTMLDivElement | null>(null)
   const fullExportRef = useRef<HTMLDivElement | null>(null)
-  const previewContainerRef = useRef<HTMLDivElement | null>(null)
-  const previewScrollRef = useRef<HTMLDivElement | null>(null)
-  const previewConversationRef = useRef<HTMLDivElement | null>(null)
-  const previewConversationContentRef = useRef<HTMLDivElement | null>(null)
-  const [fitScale, setFitScale] = useState(1)
   const conversation = useConversationStore((state) => state.conversation)
   const layoutId = useConversationStore((state) => state.layoutId)
   const themeId = useConversationStore((state) => state.themeId)
@@ -75,15 +70,13 @@ export const MainLayout = () => {
   const [quickPreviewError, setQuickPreviewError] = useState<string | null>(null)
   const [isQuickPreviewing, setIsQuickPreviewing] = useState(false)
   const [isQuickPreviewOpen, setIsQuickPreviewOpen] = useState(false)
-  const [conversationMetrics, setConversationMetrics] = useState({
-    contentHeight: 0,
-    viewportHeight: 0,
-    fullExportHeight: 0,
-    hasOverflow: false,
-  })
+  const [isReaderOpen, setIsReaderOpen] = useState(false)
 
   const handleQuickExport = async (mode: "download" | "preview") => {
-    const target = exportSettings.captureMode === "full" ? fullExportRef.current : exportRef.current
+    const target =
+      exportSettings.captureMode === "full"
+        ? fullExportRef.current
+        : previewViewport.exportRef.current
     if (!target) return
     if (mode === "preview") {
       setQuickPreviewUrls([])
@@ -100,7 +93,10 @@ export const MainLayout = () => {
             }))
           : [
               {
-                offset: exportSettings.captureMode === "full" ? undefined : getPreviewOffset(),
+                offset:
+                  exportSettings.captureMode === "full"
+                    ? undefined
+                    : previewViewport.getViewportOffset(),
               },
             ]
       const dataUrls = await exportNodeToImageSequence(target, resolvedExportSettings, renderOptions)
@@ -139,6 +135,27 @@ export const MainLayout = () => {
   const hasDark = layout.themes.some((themeEntry) => themeEntry.id === "dark")
   const isDark = themeId === "dark"
   const isEditorDark = editorTheme === "dark"
+  const visibleMessageCount = conversation.messages.filter((message) => !message.isHidden).length
+  const previewMeasurementKey = [
+    conversation.id,
+    conversation.metadata.updatedAt,
+    conversation.participants.length,
+    conversation.messages.length,
+    visibleMessageCount,
+    layout.id,
+    theme.id,
+    ui.showChrome,
+    backgroundImageUrl,
+    backgroundColor,
+  ].join(":")
+  const previewViewport = useConversationViewport({
+    width: exportSettings.width,
+    height: exportSettings.height,
+    zoom: ui.zoom,
+    autoFit: ui.autoFit,
+    measurementKey: previewMeasurementKey,
+  })
+  const conversationMetrics = previewViewport.metrics
 
   useEffect(() => {
     if (typeof document === "undefined") return
@@ -154,109 +171,13 @@ export const MainLayout = () => {
   }, [setUi])
 
   useEffect(() => {
-    const element = previewContainerRef.current
-    if (!element) return
-
-    const updateScale = () => {
-      const rect = element.getBoundingClientRect()
-      const styles = window.getComputedStyle(element)
-      const paddingX =
-        parseFloat(styles.paddingLeft || "0") + parseFloat(styles.paddingRight || "0")
-      const paddingY =
-        parseFloat(styles.paddingTop || "0") + parseFloat(styles.paddingBottom || "0")
-      const width = rect.width - paddingX
-      const height = rect.height - paddingY
-      if (!width || !height) return
-      const scaleX = width / exportSettings.width
-      const scaleY = height / exportSettings.height
-      const nextScale = Math.min(scaleX, scaleY, 1)
-      setFitScale(nextScale > 0 ? nextScale : 1)
-    }
-
-    const raf = requestAnimationFrame(updateScale)
-    const observer = new ResizeObserver(() => requestAnimationFrame(updateScale))
-    observer.observe(element)
-    return () => {
-      cancelAnimationFrame(raf)
-      observer.disconnect()
-    }
-  }, [exportSettings.width, exportSettings.height, ui.activeView, ui.autoFit])
-
-  useEffect(() => {
     if (previousActivePanelRef.current !== ui.activePanel && (ui.activeView === "preview" || !ui.isSidebarOpen)) {
       setUi({ activeView: "editor", isSidebarOpen: true })
     }
     previousActivePanelRef.current = ui.activePanel
   }, [setUi, ui.activePanel, ui.activeView, ui.isSidebarOpen])
 
-  useEffect(() => {
-    const container = previewConversationRef.current
-    const content = previewConversationContentRef.current
-    const exportElement = exportRef.current
-    if (!container || !content || !exportElement) return
-
-    let frame = 0
-    const measureConversation = () => {
-      frame = 0
-      const viewportHeight = container.clientHeight
-      if (!viewportHeight) return
-      const contentHeight = Math.ceil(Math.max(content.scrollHeight, content.offsetHeight))
-      const chromeHeight = Math.max(0, exportElement.clientHeight - viewportHeight)
-      const fullExportHeight = Math.max(exportSettings.height, Math.ceil(chromeHeight + contentHeight))
-      const hasOverflow = contentHeight > viewportHeight + 1
-      setConversationMetrics((previous) => {
-        if (
-          previous.contentHeight === contentHeight &&
-          previous.viewportHeight === viewportHeight &&
-          previous.fullExportHeight === fullExportHeight &&
-          previous.hasOverflow === hasOverflow
-        ) {
-          return previous
-        }
-        return {
-          contentHeight,
-          viewportHeight,
-          fullExportHeight,
-          hasOverflow,
-        }
-      })
-    }
-    const scheduleMeasure = () => {
-      if (frame) {
-        cancelAnimationFrame(frame)
-      }
-      frame = requestAnimationFrame(measureConversation)
-    }
-
-    scheduleMeasure()
-
-    const observer = new ResizeObserver(scheduleMeasure)
-    observer.observe(container)
-    observer.observe(content)
-    observer.observe(exportElement)
-
-    const images = Array.from(content.querySelectorAll("img"))
-    images.forEach((image) => {
-      image.addEventListener("load", scheduleMeasure)
-      image.addEventListener("error", scheduleMeasure)
-    })
-
-    return () => {
-      if (frame) {
-        cancelAnimationFrame(frame)
-      }
-      observer.disconnect()
-      images.forEach((image) => {
-        image.removeEventListener("load", scheduleMeasure)
-        image.removeEventListener("error", scheduleMeasure)
-      })
-    }
-  }, [conversation, exportSettings.height, layout.id, theme.id, ui.showChrome])
-
-  const appliedScale = clamp((ui.autoFit ? fitScale : 1) * ui.zoom, 0.1, 2)
-  const scaledWidth = exportSettings.width * appliedScale
-  const scaledHeight = exportSettings.height * appliedScale
-  const visibleMessageCount = conversation.messages.filter((message) => !message.isHidden).length
+  const appliedScale = previewViewport.appliedScale
   const resolvedExportHeight =
     exportSettings.captureMode === "full"
       ? Math.max(conversationMetrics.fullExportHeight, exportSettings.height)
@@ -268,59 +189,8 @@ export const MainLayout = () => {
     }),
     [exportSettings, resolvedExportHeight],
   )
-  const screenScrollTops = useMemo(() => {
-    const viewportHeight = Math.round(conversationMetrics.viewportHeight)
-    const contentHeight = Math.round(conversationMetrics.contentHeight)
-    if (!viewportHeight || !contentHeight) {
-      return [0]
-    }
-
-    const maxScroll = Math.max(0, contentHeight - viewportHeight)
-    if (maxScroll === 0) {
-      return [0]
-    }
-
-    const positions: number[] = []
-    for (let top = 0; top < maxScroll; top += viewportHeight) {
-      positions.push(top)
-    }
-    if (positions[positions.length - 1] !== maxScroll) {
-      positions.push(maxScroll)
-    }
-    return positions
-  }, [conversationMetrics.contentHeight, conversationMetrics.viewportHeight])
-  const screenCount = Math.max(screenScrollTops.length, 1)
-  const getPreviewOffset = () => {
-    const scrollElement = previewScrollRef.current
-    const exportElement = exportRef.current
-    if (!scrollElement || !exportElement || appliedScale === 0) {
-      return { x: 0, y: 0 }
-    }
-    const scrollRect = scrollElement.getBoundingClientRect()
-    const exportRect = exportElement.getBoundingClientRect()
-    const deltaX = scrollRect.left - exportRect.left
-    const deltaY = scrollRect.top - exportRect.top
-    const rawX = deltaX / appliedScale
-    const rawY = deltaY / appliedScale
-    const viewWidth = scrollElement.clientWidth / appliedScale
-    const viewHeight = scrollElement.clientHeight / appliedScale
-    const maxX = Math.max(0, exportSettings.width - viewWidth)
-    const maxY = Math.max(0, exportSettings.height - viewHeight)
-    const offsetX = clamp(rawX, 0, maxX)
-    const offsetY = clamp(rawY, 0, maxY)
-    return {
-      x: Number.isFinite(offsetX) ? offsetX : 0,
-      y: Number.isFinite(offsetY) ? offsetY : 0,
-    }
-  }
-  const scrollPreviewConversation = (position: "top" | "bottom") => {
-    const container = previewConversationRef.current
-    if (!container) return
-    container.scrollTo({
-      top: position === "top" ? 0 : container.scrollHeight,
-      behavior: "smooth",
-    })
-  }
+  const screenScrollTops = previewViewport.screenScrollTops
+  const screenCount = previewViewport.screenCount
 
   const panelTabs = [
     {
@@ -434,9 +304,15 @@ export const MainLayout = () => {
                 {ui.activePanel === "settings" ? <SettingsPanel /> : null}
                 {ui.activePanel === "export" ? (
                   <ExportPanel
-                    targetRef={exportSettings.captureMode === "full" ? fullExportRef : exportRef}
+                    targetRef={
+                      exportSettings.captureMode === "full"
+                        ? fullExportRef
+                        : previewViewport.exportRef
+                    }
                     getExportOffset={
-                      exportSettings.captureMode === "full" ? undefined : getPreviewOffset
+                      exportSettings.captureMode === "full"
+                        ? undefined
+                        : previewViewport.getViewportOffset
                     }
                     resolvedHeight={resolvedExportHeight}
                     screenScrollTops={screenScrollTops}
@@ -454,124 +330,56 @@ export const MainLayout = () => {
                     <div className="text-sm font-semibold text-[hsl(var(--foreground))]">Preview canvas</div>
                     <p className="text-xs text-[hsl(var(--muted-foreground))]">Live view of your layout and message flow.</p>
                   </div>
-                  <div className="flex w-full items-center gap-2 overflow-x-auto pb-1 sm:w-auto sm:flex-wrap">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setUi({ showChrome: !ui.showChrome })}
-                    >
-                      {ui.showChrome ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                      <span className="hidden sm:inline">
-                        {ui.showChrome ? "Hide chrome" : "Show chrome"}
-                      </span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setUi({ zoom: clamp(ui.zoom - 0.1, 0.5, 2) })}
-                    >
-                      <Minus className="h-4 w-4" />
-                      <span className="hidden sm:inline">Zoom out</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setUi({ zoom: clamp(ui.zoom + 0.1, 0.5, 2) })}
-                    >
-                      <Plus className="h-4 w-4" />
-                      <span className="hidden sm:inline">Zoom in</span>
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setUi({ zoom: 1 })}>
-                      <ScreenShare className="h-4 w-4" />
-                      <span className="hidden sm:inline">Reset</span>
-                    </Button>
-                  </div>
+                  <ConversationViewportControls
+                    showChrome={ui.showChrome}
+                    zoom={ui.zoom}
+                    hasOverflow={conversationMetrics.hasOverflow}
+                    onToggleChrome={() => setUi({ showChrome: !ui.showChrome })}
+                    onZoomChange={(zoom) => setUi({ zoom })}
+                    onResetZoom={() => setUi({ zoom: 1 })}
+                    onJump={previewViewport.scrollConversation}
+                    modeActions={
+                      <Button variant="default" size="sm" onClick={() => setIsReaderOpen(true)}>
+                        <BookOpen className="h-4 w-4" />
+                        <span className="hidden sm:inline">Reader mode</span>
+                      </Button>
+                    }
+                  />
                 </div>
-                <div className="flex flex-wrap items-center gap-2 text-xs text-[hsl(var(--muted-foreground))]">
-                  <SquareStack className="h-4 w-4" />
-                  Zoom {Math.round(appliedScale * 100)}%
-                  {ui.autoFit ? " (auto-fit)" : ""} - Export size {exportSettings.width} x{" "}
-                  {resolvedExportHeight}
-                  {exportSettings.captureMode === "full" ? " - all messages" : ""}
-                </div>
+                <ConversationViewportStatus
+                  appliedScale={appliedScale}
+                  autoFit={ui.autoFit}
+                  width={exportSettings.width}
+                  height={resolvedExportHeight}
+                  suffix={exportSettings.captureMode === "full" ? "all messages" : undefined}
+                />
                 {conversationMetrics.hasOverflow ? (
-                  <div className="flex flex-col gap-3 rounded-2xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-xs text-amber-100 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="rounded-2xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-xs text-amber-100">
                     <div className="space-y-1">
                       <div className="font-semibold">
                         Long conversation detected: {visibleMessageCount} visible messages
                       </div>
                       <p className="text-amber-100/80">
-                        Scroll inside the phone preview to browse the thread, or jump directly to
-                        the start or latest message.
+                        Scroll inside the phone preview to browse the thread, or use the jump
+                        controls above to move between the start and bottom.
                       </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => scrollPreviewConversation("top")}
-                      >
-                        Jump to top
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => scrollPreviewConversation("bottom")}
-                      >
-                        Jump to latest
-                      </Button>
                     </div>
                   </div>
                 ) : null}
               </CardHeader>
               <CardContent>
-                <div
-                  ref={previewContainerRef}
-                  className="flex h-[60vh] items-center justify-center rounded-3xl border border-dashed border-[hsl(var(--border))] bg-[hsl(var(--muted))] p-4 lg:h-[70vh]"
-                >
-                  <div
-                    ref={previewScrollRef}
-                    className="hide-scrollbar flex h-full w-full items-start justify-start overflow-auto"
-                  >
-                    <div
-                      className="relative m-auto"
-                      style={{
-                        width: scaledWidth,
-                        height: scaledHeight,
-                      }}
-                    >
-                      <div
-                        className="absolute left-0 top-0"
-                        style={{
-                          width: exportSettings.width,
-                          height: exportSettings.height,
-                          transform: `scale(${appliedScale})`,
-                          transformOrigin: "top left",
-                        }}
-                      >
-                        <div
-                          ref={exportRef}
-                          className="h-full w-full"
-                          style={{ width: exportSettings.width, height: exportSettings.height }}
-                        >
-                          <ChatLayout
-                            conversation={conversation}
-                            layout={layout}
-                            theme={theme}
-                            showChrome={ui.showChrome}
-                            activeParticipantId={activeParticipantId}
-                            backgroundImageUrl={backgroundImageUrl}
-                            backgroundImageOpacity={backgroundImageOpacity}
-                            backgroundColor={backgroundColor}
-                            conversationMode="scroll"
-                            conversationContainerRef={previewConversationRef}
-                            conversationContentRef={previewConversationContentRef}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <ConversationViewport
+                  viewport={previewViewport}
+                  conversation={conversation}
+                  layout={layout}
+                  theme={theme}
+                  showChrome={ui.showChrome}
+                  activeParticipantId={activeParticipantId}
+                  backgroundImageUrl={backgroundImageUrl}
+                  backgroundImageOpacity={backgroundImageOpacity}
+                  backgroundColor={backgroundColor}
+                  className="h-[60vh] lg:h-[70vh]"
+                />
                 <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="space-y-2">
                     <div className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
@@ -978,6 +786,7 @@ export const MainLayout = () => {
           </Dialog>
         </div>
       </div>
+      <ReaderMode open={isReaderOpen} onOpenChange={setIsReaderOpen} />
       <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 lg:hidden">
         <div className="rounded-[1.4rem] border border-[hsl(var(--border))] bg-[hsl(var(--card))]/90 p-1 shadow-lg backdrop-blur">
           <div
