@@ -377,6 +377,7 @@ export const ConversationBuilder = () => {
       type: Message["type"]
       status: Message["status"]
       isSpoiler?: boolean
+      exportSpoiler?: boolean
     },
   ) => {
     const messageIndex = messages.findIndex((message) => message.id === messageId)

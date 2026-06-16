@@ -1,5 +1,6 @@
 import { toJpeg, toPng } from "html-to-image"
 import type { ExportSettings } from "../store/conversationStore"
+import { normalizeSpoilerBlur } from "../constants/spoiler"
 
 const IMAGE_LOAD_TIMEOUT_MS = 3000
 const EXPORT_TIMEOUT_MS = 20000
@@ -25,6 +26,54 @@ interface ExportRenderOptions {
     top?: number
     left?: number
   }>
+}
+
+const applyExportSpoilerState = (clone: HTMLElement, revealImageSpoilers: boolean) => {
+  const spoilerFrames = Array.from(
+    clone.querySelectorAll<HTMLElement>('[data-image-spoiler="true"]'),
+  )
+
+  spoilerFrames.forEach((frame) => {
+    const image = frame.querySelector<HTMLElement>('[data-spoiler-image="true"]')
+    const shouldSpoiler = !revealImageSpoilers && frame.dataset.exportSpoiler === "true"
+    const coverOverlay = frame.querySelector<HTMLElement>('[data-spoiler-cover-overlay="true"]')
+    const exportOverlay = frame.querySelector<HTMLElement>('[data-export-spoiler-overlay="true"]')
+    const exportCorner = frame.querySelector<HTMLElement>('[data-export-spoiler-corner="true"]')
+
+    if (shouldSpoiler) {
+      frame
+        .querySelectorAll<HTMLElement>('[data-spoiler-reveal-control="true"]')
+        .forEach((control) => control.remove())
+      exportCorner?.remove()
+
+      if (image) {
+        const blur = normalizeSpoilerBlur(Number(frame.dataset.spoilerBlur))
+        image.style.filter = `blur(${blur}px)`
+      }
+
+      const overlay = coverOverlay ?? exportOverlay
+      if (overlay) {
+        overlay.classList.remove("hidden")
+        overlay.classList.add("flex")
+        overlay.style.display = ""
+      }
+      if (coverOverlay && exportOverlay && coverOverlay !== exportOverlay) {
+        exportOverlay.remove()
+      }
+      return
+    }
+
+    if (image) {
+      image.style.filter = "none"
+    }
+    coverOverlay?.remove()
+    exportOverlay?.remove()
+    if (exportCorner) {
+      exportCorner.classList.remove("hidden")
+      exportCorner.classList.add("flex")
+      exportCorner.style.display = ""
+    }
+  })
 }
 
 const waitForImages = async (node: HTMLElement) => {
@@ -63,7 +112,11 @@ const waitForImages = async (node: HTMLElement) => {
   )
 }
 
-const buildExportClone = (node: HTMLElement, options?: ExportRenderOptions) => {
+const buildExportClone = (
+  node: HTMLElement,
+  settings: ExportSettings,
+  options?: ExportRenderOptions,
+) => {
   const wrapper = document.createElement("div")
   wrapper.setAttribute("aria-hidden", "true")
   Object.assign(wrapper.style, {
@@ -78,6 +131,7 @@ const buildExportClone = (node: HTMLElement, options?: ExportRenderOptions) => {
   const clone = node.cloneNode(true) as HTMLElement
   wrapper.appendChild(clone)
   document.body.appendChild(wrapper)
+  applyExportSpoilerState(clone, settings.revealImageSpoilers)
 
   const sourceScrollRoots = Array.from(
     node.querySelectorAll<HTMLElement>('[data-conversation-scroll-root="true"]'),
@@ -115,7 +169,7 @@ export const exportNodeToImage = async (
   settings: ExportSettings,
   options?: ExportRenderOptions,
 ): Promise<string> => {
-  const { clone, cleanup } = buildExportClone(node, options)
+  const { clone, cleanup } = buildExportClone(node, settings, options)
   const imagePlaceholder =
     "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII="
   const transform = options?.offset

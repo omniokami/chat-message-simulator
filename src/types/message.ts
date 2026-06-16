@@ -13,4 +13,5 @@ export interface Message {
   status: MessageStatus
   isHidden?: boolean
   isSpoiler?: boolean
+  exportSpoiler?: boolean
 }

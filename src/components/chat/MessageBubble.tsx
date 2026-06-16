@@ -120,6 +120,7 @@ export const MessageBubble = ({
       type: message.type,
     })
   const showSpoiler = message.type === "image" && Boolean(message.imageUrl && message.isSpoiler)
+  const shouldExportSpoiler = showSpoiler && Boolean(message.exportSpoiler)
   const isSpoilerCovered = showSpoiler && !isSpoilerRevealed
   const hasImageDimensions = Boolean(
     message.imageWidth && message.imageWidth > 0 && message.imageHeight && message.imageHeight > 0,
@@ -363,6 +364,9 @@ export const MessageBubble = ({
                 isSpoilerCovered && "cursor-pointer",
                 imageRadius,
               )}
+              data-image-spoiler={showSpoiler ? "true" : undefined}
+              data-export-spoiler={showSpoiler ? String(shouldExportSpoiler) : undefined}
+              data-spoiler-blur={showSpoiler ? resolvedSpoilerBlur : undefined}
               style={imageFrameStyle}
               onClick={isSpoilerCovered ? () => setSpoilerRevealed(true) : undefined}
               onPointerDown={(event) => {
@@ -390,6 +394,7 @@ export const MessageBubble = ({
                 width={imageWidth}
                 height={imageHeight}
                 alt={message.content || "Uploaded message"}
+                data-spoiler-image={showSpoiler ? "true" : undefined}
                 style={spoilerImageStyle}
                 className={cn(
                   "block",
@@ -401,6 +406,7 @@ export const MessageBubble = ({
               {isSpoilerCovered ? (
                 <div
                   aria-hidden="true"
+                  data-spoiler-cover-overlay="true"
                   className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/25 text-white/80 transition-opacity"
                 >
                   <span className="flex flex-col items-center gap-1 rounded-full bg-black/35 px-4 py-3">
@@ -411,10 +417,34 @@ export const MessageBubble = ({
                   </span>
                 </div>
               ) : null}
+              {shouldExportSpoiler && !isSpoilerCovered ? (
+                <div
+                  aria-hidden="true"
+                  data-export-spoiler-overlay="true"
+                  className="pointer-events-none absolute inset-0 z-10 hidden items-center justify-center bg-black/25 text-white/80 transition-opacity"
+                >
+                  <span className="flex flex-col items-center gap-1 rounded-full bg-black/35 px-4 py-3">
+                    <EyeOff className="h-7 w-7 opacity-80" />
+                    <span className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] opacity-80">
+                      spoiler
+                    </span>
+                  </span>
+                </div>
+              ) : null}
+              {showSpoiler && isSpoilerCovered ? (
+                <div
+                  aria-hidden="true"
+                  data-export-spoiler-corner="true"
+                  className="pointer-events-none absolute right-2 top-2 z-10 hidden h-8 w-8 items-center justify-center rounded-full bg-black/45 text-white/80 shadow-sm"
+                >
+                  <EyeOff className="h-4 w-4" />
+                </div>
+              ) : null}
               {showSpoiler && isSpoilerRevealed ? (
                 <button
                   type="button"
                   aria-label="Hide spoiler image"
+                  data-spoiler-reveal-control="true"
                   className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/45 text-white/80 shadow-sm transition-colors hover:bg-black/60"
                   onClick={(event) => {
                     event.stopPropagation()

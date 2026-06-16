@@ -30,6 +30,7 @@ interface MessageFormProps {
     type: Message["type"]
     status: Message["status"]
     isSpoiler?: boolean
+    exportSpoiler?: boolean
   }) => void
   onCancel?: () => void
 }
@@ -95,10 +96,14 @@ export const MessageForm = ({
     height: initial?.imageHeight,
   })
   const [isSpoiler, setIsSpoiler] = useState(Boolean(initial?.imageUrl && initial?.isSpoiler))
+  const [exportSpoiler, setExportSpoiler] = useState(
+    Boolean(initial?.imageUrl && initial?.isSpoiler && initial?.exportSpoiler),
+  )
   const [imageError, setImageError] = useState<string | null>(null)
   const showAdvanced = advancedOpen ?? true
   const showAdvancedToggle = typeof advancedOpen === "boolean" && typeof onToggleAdvanced === "function"
   const spoilerSwitchId = useId()
+  const exportSpoilerSwitchId = useId()
   const previousDefaultRef = useRef(defaultSenderId)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -186,6 +191,7 @@ export const MessageForm = ({
           imageWidth: type === "image" && imageUrl ? imageDimensions.width : undefined,
           imageHeight: type === "image" && imageUrl ? imageDimensions.height : undefined,
           isSpoiler: type === "image" && imageUrl ? isSpoiler : undefined,
+          exportSpoiler: type === "image" && imageUrl && isSpoiler ? exportSpoiler : undefined,
           timestamp: fromInputValue(timestamp),
           type,
           status,
@@ -199,6 +205,7 @@ export const MessageForm = ({
           setImageUrl("")
           setImageDimensions({})
           setIsSpoiler(false)
+          setExportSpoiler(false)
           setImageError(null)
         }
       }}
@@ -261,34 +268,67 @@ export const MessageForm = ({
                     setImageUrl("")
                     setImageDimensions({})
                     setIsSpoiler(false)
+                    setExportSpoiler(false)
                   }}
                 >
                   Remove
                 </Button>
               ) : null}
-              <div className={cn("flex items-center gap-2", !imageUrl && "opacity-60")}>
-                <Label
-                  htmlFor={spoilerSwitchId}
+              <span className="text-xs text-[hsl(var(--muted-foreground))]">JPG, PNG, or WEBP up to 5MB.</span>
+              <div className="flex w-full flex-col gap-2 pt-1">
+                <div className={cn("flex items-center gap-2", !imageUrl && "opacity-60")}>
+                  <Switch
+                    id={spoilerSwitchId}
+                    checked={Boolean(imageUrl && isSpoiler)}
+                    onCheckedChange={(value) => {
+                      if (!imageUrl) return
+                      setIsSpoiler(value)
+                      if (!value) {
+                        setExportSpoiler(false)
+                      }
+                    }}
+                    disabled={!imageUrl}
+                    className={cn(!imageUrl && "cursor-not-allowed")}
+                  />
+                  <Label
+                    htmlFor={spoilerSwitchId}
+                    className={cn(
+                      "flex items-center gap-1.5 text-xs font-medium text-[hsl(var(--muted-foreground))]",
+                      imageUrl ? "cursor-pointer" : "cursor-not-allowed",
+                    )}
+                  >
+                    <EyeOff className="h-3.5 w-3.5" />
+                    Spoiler
+                  </Label>
+                </div>
+                <div
                   className={cn(
-                    "flex items-center gap-1.5 text-xs font-medium text-[hsl(var(--muted-foreground))]",
-                    imageUrl ? "cursor-pointer" : "cursor-not-allowed",
+                    "flex items-center gap-2",
+                    (!imageUrl || !isSpoiler) && "opacity-60",
                   )}
                 >
-                  <EyeOff className="h-3.5 w-3.5" />
-                  Spoiler
-                </Label>
-                <Switch
-                  id={spoilerSwitchId}
-                  checked={Boolean(imageUrl && isSpoiler)}
-                  onCheckedChange={(value) => {
-                    if (!imageUrl) return
-                    setIsSpoiler(value)
-                  }}
-                  disabled={!imageUrl}
-                  className={cn(!imageUrl && "cursor-not-allowed")}
-                />
+                  <Switch
+                    id={exportSpoilerSwitchId}
+                    checked={Boolean(imageUrl && isSpoiler && exportSpoiler)}
+                    onCheckedChange={(value) => {
+                      if (!imageUrl || !isSpoiler) return
+                      setExportSpoiler(value)
+                    }}
+                    disabled={!imageUrl || !isSpoiler}
+                    className={cn((!imageUrl || !isSpoiler) && "cursor-not-allowed")}
+                  />
+                  <Label
+                    htmlFor={exportSpoilerSwitchId}
+                    className={cn(
+                      "flex items-center gap-1.5 text-xs font-medium text-[hsl(var(--muted-foreground))]",
+                      imageUrl && isSpoiler ? "cursor-pointer" : "cursor-not-allowed",
+                    )}
+                  >
+                    <EyeOff className="h-3.5 w-3.5" />
+                    Export with spoiler
+                  </Label>
+                </div>
               </div>
-              <span className="text-xs text-[hsl(var(--muted-foreground))]">JPG, PNG, or WEBP up to 5MB.</span>
             </div>
             <input
               ref={fileInputRef}

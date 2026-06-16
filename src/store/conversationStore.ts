@@ -19,6 +19,7 @@ export interface ExportSettings {
   format: ExportFormat
   quality: number
   captureMode: ExportCaptureMode
+  revealImageSpoilers: boolean
 }
 
 export interface ConversationWithAppearance {
@@ -102,6 +103,7 @@ interface ConversationStore {
     type: MessageType
     status: MessageStatus
     isSpoiler?: boolean
+    exportSpoiler?: boolean
   }) => void
   updateMessage: (messageId: string, updates: Partial<Message>) => void
   deleteMessage: (messageId: string) => void
@@ -282,6 +284,7 @@ const defaultExportSettings: ExportSettings = {
   format: "png",
   quality: 0.95,
   captureMode: "viewport",
+  revealImageSpoilers: false,
 }
 
 const defaultUiState: UiState = {

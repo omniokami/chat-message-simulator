@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { SizePresets } from "@/components/export/SizePresets"
+import { Switch } from "@/components/ui/switch"
 import { exportScaleOptions, sizePresets } from "@/constants/exportPresets"
 import { exportNodeToImageSequence } from "@/utils/export"
 import { useConversationStore } from "@/store/conversationStore"
@@ -200,6 +201,19 @@ export const ExportPanel = ({
               className="pl-9"
             />
           </div>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Spoilers</Label>
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2">
+          <div className="text-sm font-medium text-[hsl(var(--foreground))]">
+            Reveal all image spoilers
+          </div>
+          <Switch
+            checked={exportSettings.revealImageSpoilers}
+            onCheckedChange={(value) => setExportSettings({ revealImageSpoilers: value })}
+          />
         </div>
       </div>
 
