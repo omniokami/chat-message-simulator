@@ -47,6 +47,10 @@ export const Toolbar = () => {
   const conversation = useConversationStore((state) => state.conversation)
   const layoutId = useConversationStore((state) => state.layoutId)
   const themeId = useConversationStore((state) => state.themeId)
+  const editorTheme = useConversationStore((state) => state.editorTheme)
+  const backgroundImageUrl = useConversationStore((state) => state.backgroundImageUrl)
+  const backgroundImageOpacity = useConversationStore((state) => state.backgroundImageOpacity)
+  const backgroundColor = useConversationStore((state) => state.backgroundColor)
   const loadConversation = useConversationStore((state) => state.loadConversation)
   const resetConversation = useConversationStore((state) => state.resetConversation)
   const saveSnapshot = useConversationStore((state) => state.saveSnapshot)
@@ -194,7 +198,18 @@ export const Toolbar = () => {
                     <Button
                       variant="secondary"
                       onClick={() => {
-                        downloadJson(conversation, "conversation.json")
+                        downloadJson(
+                          {
+                            conversation,
+                            layoutId,
+                            themeId,
+                            editorTheme,
+                            backgroundImageUrl,
+                            backgroundImageOpacity,
+                            backgroundColor,
+                          },
+                          "conversation.json",
+                        )
                         setIsActionsOpen(false)
                       }}
                     >
@@ -281,7 +296,15 @@ export const Toolbar = () => {
             if (!file) return
             try {
               const data = await readJsonFile(file)
-              loadConversation(data)
+              // Check if it's the new format with appearance settings
+              if ("conversation" in data) {
+                // New format: ConversationWithAppearance
+                const { conversation: conv, ...appearance } = data
+                loadConversation(conv, appearance)
+              } else {
+                // Old format: just Conversation
+                loadConversation(data)
+              }
             } catch (error) {
               console.error("Failed to import JSON", error)
             } finally {

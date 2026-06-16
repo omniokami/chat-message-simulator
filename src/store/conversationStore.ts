@@ -1,10 +1,11 @@
 import { create } from "zustand"
-import { createJSONStorage, persist } from "zustand/middleware"
+import { persist } from "zustand/middleware"
 import { defaultLayoutId } from "../constants/layouts"
 import type { Conversation, ConversationEditorState, Participant } from "../types/conversation"
 import type { Message, MessageStatus, MessageType } from "../types/message"
 import type { LayoutId, ThemeId } from "../types/layout"
 import { generateId } from "../utils/helpers"
+import { createIndexedDBStorage } from "../utils/idb-storage"
 
 export type ExportFormat = "png" | "jpeg"
 export type ExportCaptureMode = "viewport" | "full" | "screens"
@@ -17,6 +18,16 @@ export interface ExportSettings {
   format: ExportFormat
   quality: number
   captureMode: ExportCaptureMode
+}
+
+export interface ConversationWithAppearance {
+  conversation: Conversation
+  layoutId: LayoutId
+  themeId: ThemeId
+  editorTheme: EditorTheme
+  backgroundImageUrl: string
+  backgroundImageOpacity: number
+  backgroundColor: string
 }
 
 export interface UiState {
@@ -90,7 +101,7 @@ interface ConversationStore {
   setExportSettings: (settings: Partial<ExportSettings>) => void
   setUi: (updates: Partial<UiState>) => void
   resetConversation: () => void
-  loadConversation: (conversation: Conversation) => void
+  loadConversation: (conversation: Conversation, appearance?: Partial<ConversationWithAppearance>) => void
   undo: () => void
   redo: () => void
   saveSnapshot: () => void
@@ -307,7 +318,7 @@ const pushHistory = (state: ConversationStore): HistoryState => {
 
 export const useConversationStore = create<ConversationStore>()(
   persist(
-    (set, get) => ({
+    (set, _get) => ({
       conversation: buildDefaultConversation(),
       layoutId: defaultLayoutId,
       themeId: "light",
@@ -572,7 +583,7 @@ export const useConversationStore = create<ConversationStore>()(
           },
           history: pushHistory(state),
         })),
-      setUi: (updates) => set((state) => ({ ui: { ...state.ui, ...updates } })),
+      setUi: (updates) => set((state) => ({ ui: { ...state.ui, ...updates }, history: pushHistory(state) })),
       resetConversation: () =>
         set((state) => ({
           conversation: buildDefaultConversation(),
@@ -588,7 +599,7 @@ export const useConversationStore = create<ConversationStore>()(
           lastAutosaveAt: null,
           history: pushHistory(state),
         })),
-      loadConversation: (conversation) => {
+      loadConversation: (conversation, appearance) => {
         const legacyTitle = (conversation as { title?: string }).title
         const participants = normalizeParticipants(conversation.participants)
         const groupName =
@@ -601,6 +612,12 @@ export const useConversationStore = create<ConversationStore>()(
             editorState: normalizeConversationEditorState(conversation.editorState),
           },
           activeParticipantId: participants[0]?.id ?? "",
+          layoutId: appearance?.layoutId ?? state.layoutId,
+          themeId: appearance?.themeId ?? state.themeId,
+          editorTheme: appearance?.editorTheme ?? state.editorTheme,
+          backgroundImageUrl: appearance?.backgroundImageUrl ?? state.backgroundImageUrl,
+          backgroundImageOpacity: appearance?.backgroundImageOpacity ?? state.backgroundImageOpacity,
+          backgroundColor: appearance?.backgroundColor ?? state.backgroundColor,
           history: pushHistory(state),
         }))
       },
@@ -643,18 +660,10 @@ export const useConversationStore = create<ConversationStore>()(
           }
         }),
       saveSnapshot: () => {
-        const snapshot = get()
         try {
-          localStorage.setItem(
-            STORAGE_KEY,
-            JSON.stringify({
-              conversation: snapshot.conversation,
-              layoutId: snapshot.layoutId,
-              themeId: snapshot.themeId,
-              activeParticipantId: snapshot.activeParticipantId,
-              exportSettings: snapshot.exportSettings,
-            }),
-          )
+          // Update lastAutosaveAt to trigger the persist middleware to save
+          // The persist middleware with partialize will automatically save all state
+          set({ lastAutosaveAt: Date.now() })
         } catch (error) {
           console.error("Failed to save snapshot", error)
         }
@@ -669,24 +678,48 @@ export const useConversationStore = create<ConversationStore>()(
     }),
     {
       name: STORAGE_KEY,
-      storage: createJSONStorage(() => localStorage),
+      storage: createIndexedDBStorage(),
       version: 4,
-      migrate: (state) => {
-        if (!state) return state
-        const typed = state as ConversationStore
+      migrate: (_state: unknown, _version: number): ConversationStore => {
+        const state = _state as any
+        if (!state) {
+          const defaults = buildDefaultConversation()
+          return {
+            conversation: defaults,
+            layoutId: defaultLayoutId,
+            themeId: "light",
+            editorTheme: "light",
+            activeParticipantId: defaultParticipants[0].id,
+            backgroundImageUrl: "",
+            backgroundImageOpacity: 0.35,
+            backgroundColor: "",
+            exportSettings: defaultExportSettings,
+            ui: defaultUiState,
+            history: { past: [], future: [] },
+            lastAutosaveAt: null,
+          } as any
+        }
         return {
-          ...typed,
-          editorTheme: typed.editorTheme === "dark" ? "dark" : "light",
-          conversation: {
-            ...typed.conversation,
-            participants: normalizeParticipants(typed.conversation.participants),
-            editorState: normalizeConversationEditorState(typed.conversation.editorState),
-          },
+          conversation: state.conversation ? {
+            ...state.conversation,
+            participants: normalizeParticipants(state.conversation.participants || []),
+            editorState: normalizeConversationEditorState(state.conversation.editorState),
+          } : buildDefaultConversation(),
+          layoutId: state.layoutId ?? defaultLayoutId,
+          themeId: state.themeId ?? "light",
+          editorTheme: state.editorTheme === "dark" ? "dark" : "light",
+          activeParticipantId: state.activeParticipantId ?? defaultParticipants[0].id,
+          backgroundImageUrl: state.backgroundImageUrl ?? "",
+          backgroundImageOpacity: state.backgroundImageOpacity ?? 0.35,
+          backgroundColor: state.backgroundColor ?? "",
           exportSettings: {
             ...defaultExportSettings,
-            ...typed.exportSettings,
+            ...state.exportSettings,
           },
-        }
+          ui: state.ui ?? defaultUiState,
+          history: state.history ?? { past: [], future: [] },
+          lastAutosaveAt: state.lastAutosaveAt ?? null,
+        } as any
       },
       partialize: (state) => ({
         conversation: state.conversation,
@@ -698,6 +731,8 @@ export const useConversationStore = create<ConversationStore>()(
         backgroundImageOpacity: state.backgroundImageOpacity,
         backgroundColor: state.backgroundColor,
         exportSettings: state.exportSettings,
+        ui: state.ui,
+        history: state.history,
         lastAutosaveAt: state.lastAutosaveAt,
       }),
     },

@@ -183,7 +183,15 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
               if (!file) return
               try {
                 const data = await readJsonFile(file)
-                loadConversation(data)
+                // Check if it's the new format with appearance settings
+                if ("conversation" in data) {
+                  // New format: ConversationWithAppearance
+                  const { conversation: conv, ...appearance } = data
+                  loadConversation(conv, appearance)
+                } else {
+                  // Old format: just Conversation
+                  loadConversation(data)
+                }
                 setLoadError(null)
               } catch (error) {
                 const message = error instanceof Error ? error.message : "Could not open file"
