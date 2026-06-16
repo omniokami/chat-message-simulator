@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { SizePresets } from "@/components/export/SizePresets"
-import { sizePresets } from "@/constants/exportPresets"
+import { exportScaleOptions, sizePresets } from "@/constants/exportPresets"
 import { exportNodeToImageSequence } from "@/utils/export"
 import { useConversationStore } from "@/store/conversationStore"
 import {
@@ -206,7 +206,7 @@ export const ExportPanel = ({
       <div className="space-y-2">
         <Label>Quality</Label>
         <div className="flex flex-wrap gap-2">
-          {[1, 2, 3].map((scale) => (
+          {exportScaleOptions.map((scale) => (
             <Button
               key={scale}
               variant={exportSettings.scale === scale ? "default" : "outline"}

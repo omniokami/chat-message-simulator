@@ -6,6 +6,8 @@ export interface SizePreset {
   hint: string
 }
 
+export const exportScaleOptions = [1, 2, 3, 5, 8] as const
+
 export const sizePresets: SizePreset[] = [
   { id: "iphone-14-pro", label: "iPhone 14 Pro", width: 393, height: 852, hint: "Mobile" },
   { id: "iphone-se", label: "iPhone SE", width: 375, height: 667, hint: "Compact" },

@@ -10,7 +10,7 @@ import {
   Users,
 } from "lucide-react"
 import { layoutConfigs } from "@/constants/layouts"
-import { sizePresets, type SizePreset } from "@/constants/exportPresets"
+import { exportScaleOptions, sizePresets, type SizePreset } from "@/constants/exportPresets"
 import { useConversationStore } from "@/store/conversationStore"
 import { ChatLayout } from "@/components/layout/ChatLayout"
 import { Toolbar } from "@/components/layout/Toolbar"
@@ -475,7 +475,7 @@ export const MainLayout = () => {
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    {[1, 2, 3].map((scale) => (
+                    {exportScaleOptions.map((scale) => (
                       <Button
                         key={scale}
                         variant={exportSettings.scale === scale ? "default" : "outline"}
