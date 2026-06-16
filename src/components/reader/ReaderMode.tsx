@@ -74,6 +74,9 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
   useEffect(() => {
     if (!open || typeof document === "undefined") return
 
+    document.documentElement.dataset.readerMode = "open"
+    document.body.dataset.readerMode = "open"
+
     const bodyOverflow = document.body.style.overflow
     const htmlOverflow = document.documentElement.style.overflow
     const bodyOverscrollBehavior = document.body.style.overscrollBehavior
@@ -85,6 +88,8 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
     document.documentElement.style.overscrollBehavior = "none"
 
     return () => {
+      delete document.documentElement.dataset.readerMode
+      delete document.body.dataset.readerMode
       document.body.style.overflow = bodyOverflow
       document.documentElement.style.overflow = htmlOverflow
       document.body.style.overscrollBehavior = bodyOverscrollBehavior
