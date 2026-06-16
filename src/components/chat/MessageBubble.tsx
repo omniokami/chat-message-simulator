@@ -3,6 +3,7 @@ import { Check, CheckCheck, EyeOff } from "lucide-react"
 import type { Message } from "@/types/message"
 import type { Participant } from "@/types/conversation"
 import type { LayoutConfig } from "@/types/layout"
+import { normalizeSpoilerBlur } from "@/constants/spoiler"
 import { cn } from "@/utils/cn"
 import { formatTimestamp } from "@/utils/helpers"
 import { VerifiedBadge } from "@/components/ui/verified-badge"
@@ -14,6 +15,7 @@ interface MessageBubbleProps {
   isOwn: boolean
   layout: LayoutConfig
   isGroup: boolean
+  spoilerBlur: number
   showAvatar?: boolean
 }
 
@@ -49,12 +51,38 @@ const shouldUseObjectUrl = (url?: string): url is string => Boolean(url?.startsW
 const MAX_MESSAGE_IMAGE_WIDTH = 240
 const MAX_MESSAGE_IMAGE_HEIGHT = 256
 
+const dataUrlToBlob = (dataUrl: string) => {
+  const commaIndex = dataUrl.indexOf(",")
+  if (commaIndex === -1) return null
+
+  const metadata = dataUrl.slice(0, commaIndex)
+  const payload = dataUrl.slice(commaIndex + 1)
+  const mimeType = /^data:([^;,]+)/i.exec(metadata)?.[1] ?? "application/octet-stream"
+
+  try {
+    if (metadata.includes(";base64")) {
+      const binary = window.atob(payload)
+      const bytes = new Uint8Array(binary.length)
+      for (let index = 0; index < binary.length; index += 1) {
+        bytes[index] = binary.charCodeAt(index)
+      }
+      return new Blob([bytes], { type: mimeType })
+    }
+
+    return new Blob([decodeURIComponent(payload)], { type: mimeType })
+  } catch (error) {
+    console.error("Failed to convert image data URL", error)
+    return null
+  }
+}
+
 export const MessageBubble = ({
   message,
   sender,
   isOwn,
   layout,
   isGroup,
+  spoilerBlur,
   showAvatar,
 }: MessageBubbleProps) => {
   const isWhatsApp = layout.id === "whatsapp"
@@ -109,6 +137,11 @@ export const MessageBubble = ({
           height: Math.round(imageHeight * imageScale),
         }
       : undefined
+  const resolvedSpoilerBlur = normalizeSpoilerBlur(spoilerBlur)
+  const spoilerImageStyle: React.CSSProperties | undefined =
+    isSpoilerCovered && resolvedSpoilerBlur > 0
+      ? { filter: `blur(${resolvedSpoilerBlur}px)` }
+      : undefined
   const imageRef = useRef<HTMLImageElement | null>(null)
   const imageObjectUrlRef = useRef<{
     source?: string
@@ -161,7 +194,7 @@ export const MessageBubble = ({
     color: textColor,
   }
 
-  const prepareImageObjectUrl = () => {
+  const prepareImageObjectUrl = (preferSync = false) => {
     const source = message.imageUrl
     if (!shouldUseObjectUrl(source)) return
 
@@ -178,6 +211,18 @@ export const MessageBubble = ({
       URL.revokeObjectURL(prepared.url)
     }
     imageObjectUrlRef.current = { source }
+
+    if (preferSync) {
+      const blob = dataUrlToBlob(source)
+      if (blob) {
+        const objectUrl = URL.createObjectURL(blob)
+        imageObjectUrlRef.current = { source, url: objectUrl }
+        if (imageRef.current && message.imageUrl === source) {
+          imageRef.current.src = objectUrl
+        }
+        return
+      }
+    }
 
     fetch(source)
       .then((response) => response.blob())
@@ -320,7 +365,12 @@ export const MessageBubble = ({
               )}
               style={imageFrameStyle}
               onClick={isSpoilerCovered ? () => setSpoilerRevealed(true) : undefined}
-              onContextMenu={prepareImageObjectUrl}
+              onPointerDown={(event) => {
+                if (event.button === 2) {
+                  prepareImageObjectUrl(true)
+                }
+              }}
+              onContextMenu={() => prepareImageObjectUrl(true)}
               onKeyDown={
                 isSpoilerCovered
                   ? (event) => {
@@ -340,12 +390,12 @@ export const MessageBubble = ({
                 width={imageWidth}
                 height={imageHeight}
                 alt={message.content || "Uploaded message"}
+                style={spoilerImageStyle}
                 className={cn(
-                  "block transition-[filter,transform] duration-500 ease-out",
+                  "block",
                   imageFrameStyle
                     ? "h-full w-full object-cover"
                     : "max-h-64 max-w-[240px] object-contain",
-                  isSpoilerCovered && "scale-[1.03] blur-md",
                 )}
               />
               {isSpoilerCovered ? (
@@ -353,7 +403,7 @@ export const MessageBubble = ({
                   aria-hidden="true"
                   className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/25 text-white/80 transition-opacity"
                 >
-                  <span className="flex flex-col items-center gap-1 rounded-full bg-black/25 px-4 py-3 backdrop-blur-sm">
+                  <span className="flex flex-col items-center gap-1 rounded-full bg-black/35 px-4 py-3">
                     <EyeOff className="h-7 w-7 opacity-80" />
                     <span className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] opacity-80">
                       spoiler
@@ -365,7 +415,7 @@ export const MessageBubble = ({
                 <button
                   type="button"
                   aria-label="Hide spoiler image"
-                  className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/45 text-white/80 shadow-sm backdrop-blur-sm transition-colors hover:bg-black/60"
+                  className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/45 text-white/80 shadow-sm transition-colors hover:bg-black/60"
                   onClick={(event) => {
                     event.stopPropagation()
                     setSpoilerRevealed(false)

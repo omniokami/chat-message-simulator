@@ -40,6 +40,7 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
   const backgroundImageUrl = useConversationStore((state) => state.backgroundImageUrl)
   const backgroundImageOpacity = useConversationStore((state) => state.backgroundImageOpacity)
   const backgroundColor = useConversationStore((state) => state.backgroundColor)
+  const spoilerBlur = useConversationStore((state) => state.spoilerBlur)
   const exportSettings = useConversationStore((state) => state.exportSettings)
   const ui = useConversationStore((state) => state.ui)
   const setUi = useConversationStore((state) => state.setUi)
@@ -195,6 +196,7 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
                 backgroundImageUrl={backgroundImageUrl}
                 backgroundImageOpacity={backgroundImageOpacity}
                 backgroundColor={backgroundColor}
+                spoilerBlur={spoilerBlur}
                 className="h-full rounded-none border-0 bg-[hsl(var(--background))] p-0"
                 scrollClassName="overflow-hidden"
                 fitToFrame

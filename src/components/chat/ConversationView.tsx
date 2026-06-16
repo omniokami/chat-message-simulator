@@ -10,6 +10,7 @@ interface ConversationViewProps {
   participants: Participant[]
   layout: LayoutConfig
   selfId: string
+  spoilerBlur: number
   mode?: "scroll" | "expanded"
   containerRef?: React.Ref<HTMLDivElement>
   contentRef?: React.Ref<HTMLDivElement>
@@ -20,6 +21,7 @@ export const ConversationView = ({
   participants,
   layout,
   selfId,
+  spoilerBlur,
   mode = "scroll",
   containerRef,
   contentRef,
@@ -134,6 +136,7 @@ export const ConversationView = ({
                 isOwn={isOwn}
                 layout={layout}
                 isGroup={isGroup}
+                spoilerBlur={spoilerBlur}
                 showAvatar={showAvatar}
               />
             </div>

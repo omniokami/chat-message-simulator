@@ -27,6 +27,7 @@ interface ConversationViewportProps {
   backgroundImageUrl: string
   backgroundImageOpacity: number
   backgroundColor: string
+  spoilerBlur: number
   className?: string
   scrollClassName?: string
   fitToFrame?: boolean
@@ -42,6 +43,7 @@ export const ConversationViewport = ({
   backgroundImageUrl,
   backgroundImageOpacity,
   backgroundColor,
+  spoilerBlur,
   className,
   scrollClassName,
   fitToFrame = false,
@@ -76,6 +78,7 @@ export const ConversationViewport = ({
         backgroundImageUrl={backgroundImageUrl}
         backgroundImageOpacity={backgroundImageOpacity}
         backgroundColor={backgroundColor}
+        spoilerBlur={spoilerBlur}
         conversationMode="scroll"
         conversationContainerRef={conversationContainerRef}
         conversationContentRef={conversationContentRef}

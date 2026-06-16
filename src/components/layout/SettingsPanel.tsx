@@ -1,5 +1,10 @@
-import { ImagePlus, Minus, PaintBucket, Plus, ScreenShare } from "lucide-react"
+import { EyeOff, ImagePlus, Minus, PaintBucket, Plus, ScreenShare } from "lucide-react"
 import { layoutConfigs } from "@/constants/layouts"
+import {
+  MAX_SPOILER_BLUR,
+  MIN_SPOILER_BLUR,
+  normalizeSpoilerBlur,
+} from "@/constants/spoiler"
 import { useConversationStore } from "@/store/conversationStore"
 import { LayoutSelector } from "@/components/layout/LayoutSelector"
 import { Button } from "@/components/ui/button"
@@ -24,6 +29,8 @@ export const SettingsPanel = () => {
   const clearBackgroundImage = useConversationStore((state) => state.clearBackgroundImage)
   const backgroundColor = useConversationStore((state) => state.backgroundColor)
   const setBackgroundColor = useConversationStore((state) => state.setBackgroundColor)
+  const spoilerBlur = useConversationStore((state) => state.spoilerBlur)
+  const setSpoilerBlur = useConversationStore((state) => state.setSpoilerBlur)
 
   const isGroup = conversation.participants.length > 2
   const title = getConversationTitle(conversation)
@@ -77,6 +84,37 @@ export const SettingsPanel = () => {
           <div className="text-xs text-[hsl(var(--muted-foreground))]">Show header and input bar.</div>
         </div>
         <Switch checked={ui.showChrome} onCheckedChange={(value) => setUi({ showChrome: value })} />
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-3">
+          <Label>Spoiler blur</Label>
+          <span className="shrink-0 text-xs tabular-nums text-[hsl(var(--muted-foreground))]">
+            {spoilerBlur}px
+          </span>
+        </div>
+        <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-3">
+          <div className="flex items-center gap-3">
+            <EyeOff className="h-4 w-4 shrink-0 text-[hsl(var(--muted-foreground))]" />
+            <div className="min-w-0 flex-1">
+              <Slider
+                min={MIN_SPOILER_BLUR}
+                max={MAX_SPOILER_BLUR}
+                step={1}
+                value={[spoilerBlur]}
+                onValueChange={(value) => setSpoilerBlur(normalizeSpoilerBlur(value[0]))}
+              />
+            </div>
+            <Input
+              type="number"
+              min={MIN_SPOILER_BLUR}
+              max={MAX_SPOILER_BLUR}
+              value={spoilerBlur}
+              onChange={(event) => setSpoilerBlur(normalizeSpoilerBlur(Number(event.target.value)))}
+              className="w-20"
+            />
+          </div>
+        </div>
       </div>
 
       <div className="space-y-2">

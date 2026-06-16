@@ -14,6 +14,7 @@ interface ChatLayoutProps {
   backgroundImageUrl: string
   backgroundImageOpacity: number
   backgroundColor: string
+  spoilerBlur: number
   conversationMode?: "scroll" | "expanded"
   conversationContainerRef?: React.Ref<HTMLDivElement>
   conversationContentRef?: React.Ref<HTMLDivElement>
@@ -63,6 +64,7 @@ export const ChatLayout = ({
   backgroundImageUrl,
   backgroundImageOpacity,
   backgroundColor,
+  spoilerBlur,
   conversationMode = "scroll",
   conversationContainerRef,
   conversationContentRef,
@@ -135,6 +137,7 @@ export const ChatLayout = ({
           participants={conversation.participants}
           layout={layout}
           selfId={selfId}
+          spoilerBlur={spoilerBlur}
           mode={conversationMode}
           containerRef={conversationContainerRef}
           contentRef={conversationContentRef}

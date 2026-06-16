@@ -25,6 +25,7 @@ const hasPersistedChange = (state: StoreState, prevState: StoreState) =>
   state.backgroundImageUrl !== prevState.backgroundImageUrl ||
   state.backgroundImageOpacity !== prevState.backgroundImageOpacity ||
   state.backgroundColor !== prevState.backgroundColor ||
+  state.spoilerBlur !== prevState.spoilerBlur ||
   state.exportSettings !== prevState.exportSettings
 
 const formatRelativeTime = (from: number, to: number) => {
@@ -51,6 +52,7 @@ export const Toolbar = () => {
   const backgroundImageUrl = useConversationStore((state) => state.backgroundImageUrl)
   const backgroundImageOpacity = useConversationStore((state) => state.backgroundImageOpacity)
   const backgroundColor = useConversationStore((state) => state.backgroundColor)
+  const spoilerBlur = useConversationStore((state) => state.spoilerBlur)
   const loadConversation = useConversationStore((state) => state.loadConversation)
   const resetConversation = useConversationStore((state) => state.resetConversation)
   const saveSnapshot = useConversationStore((state) => state.saveSnapshot)
@@ -209,6 +211,7 @@ export const Toolbar = () => {
                             backgroundImageUrl,
                             backgroundImageOpacity,
                             backgroundColor,
+                            spoilerBlur,
                           },
                           "conversation.json",
                         )

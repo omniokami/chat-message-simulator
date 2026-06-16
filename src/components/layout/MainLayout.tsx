@@ -58,6 +58,7 @@ export const MainLayout = () => {
   const backgroundImageUrl = useConversationStore((state) => state.backgroundImageUrl)
   const backgroundImageOpacity = useConversationStore((state) => state.backgroundImageOpacity)
   const backgroundColor = useConversationStore((state) => state.backgroundColor)
+  const spoilerBlur = useConversationStore((state) => state.spoilerBlur)
   const ui = useConversationStore((state) => state.ui)
   const previousActivePanelRef = useRef(ui.activePanel)
   const setUi = useConversationStore((state) => state.setUi)
@@ -383,6 +384,7 @@ export const MainLayout = () => {
                   backgroundImageUrl={backgroundImageUrl}
                   backgroundImageOpacity={backgroundImageOpacity}
                   backgroundColor={backgroundColor}
+                  spoilerBlur={spoilerBlur}
                   className="h-[60vh] lg:h-[70vh]"
                 />
                 <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -582,6 +584,7 @@ export const MainLayout = () => {
                         backgroundImageUrl={backgroundImageUrl}
                         backgroundImageOpacity={backgroundImageOpacity}
                         backgroundColor={backgroundColor}
+                        spoilerBlur={spoilerBlur}
                         conversationMode="expanded"
                       />
                     </div>

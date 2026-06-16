@@ -6,6 +6,7 @@ import type { Message, MessageStatus, MessageType } from "../types/message"
 import type { LayoutId, ThemeId } from "../types/layout"
 import { generateId } from "../utils/helpers"
 import { createIndexedDBStorage } from "../utils/idb-storage"
+import { DEFAULT_SPOILER_BLUR, normalizeSpoilerBlur } from "../constants/spoiler"
 
 export type ExportFormat = "png" | "jpeg"
 export type ExportCaptureMode = "viewport" | "full" | "screens"
@@ -28,6 +29,7 @@ export interface ConversationWithAppearance {
   backgroundImageUrl: string
   backgroundImageOpacity: number
   backgroundColor: string
+  spoilerBlur: number
 }
 
 export interface UiState {
@@ -49,6 +51,7 @@ type Snapshot = {
   backgroundImageUrl: string
   backgroundImageOpacity: number
   backgroundColor: string
+  spoilerBlur: number
   exportSettings: ExportSettings
 }
 
@@ -70,6 +73,7 @@ interface ConversationStore {
   backgroundImageUrl: string
   backgroundImageOpacity: number
   backgroundColor: string
+  spoilerBlur: number
   exportSettings: ExportSettings
   ui: UiState
   history: HistoryState
@@ -82,6 +86,7 @@ interface ConversationStore {
   setBackgroundImageOpacity: (opacity: number) => void
   clearBackgroundImage: () => void
   setBackgroundColor: (color: string) => void
+  setSpoilerBlur: (blur: number) => void
   setLastAutosaveAt: (timestamp: number | null) => void
   addParticipant: (participant: Omit<Participant, "id">) => void
   updateParticipant: (participantId: string, updates: Partial<Participant>) => void
@@ -312,6 +317,7 @@ const buildSnapshot = (state: ConversationStore): Snapshot => ({
   backgroundImageUrl: state.backgroundImageUrl,
   backgroundImageOpacity: state.backgroundImageOpacity,
   backgroundColor: state.backgroundColor,
+  spoilerBlur: state.spoilerBlur,
   exportSettings: state.exportSettings,
 })
 
@@ -334,6 +340,7 @@ export const useConversationStore = create<ConversationStore>()(
       backgroundImageUrl: "",
       backgroundImageOpacity: 0.35,
       backgroundColor: "",
+      spoilerBlur: DEFAULT_SPOILER_BLUR,
       exportSettings: defaultExportSettings,
       ui: defaultUiState,
       history: { past: [], future: [] },
@@ -351,6 +358,16 @@ export const useConversationStore = create<ConversationStore>()(
         set((state) => ({ backgroundImageUrl: "", history: pushHistory(state) })),
       setBackgroundColor: (color) =>
         set((state) => ({ backgroundColor: color, history: pushHistory(state) })),
+      setSpoilerBlur: (blur) =>
+        set((state) => {
+          const spoilerBlur = normalizeSpoilerBlur(blur)
+          return state.spoilerBlur === spoilerBlur
+            ? state
+            : {
+                spoilerBlur,
+                history: pushHistory(state),
+              }
+        }),
       setLastAutosaveAt: (timestamp) => set({ lastAutosaveAt: timestamp }),
       addParticipant: (participant) =>
         set((state) => {
@@ -609,6 +626,7 @@ export const useConversationStore = create<ConversationStore>()(
           backgroundImageUrl: "",
           backgroundImageOpacity: 0.35,
           backgroundColor: "",
+          spoilerBlur: DEFAULT_SPOILER_BLUR,
           exportSettings: { ...defaultExportSettings },
           ui: { ...defaultUiState },
           lastAutosaveAt: null,
@@ -633,6 +651,7 @@ export const useConversationStore = create<ConversationStore>()(
           backgroundImageUrl: appearance?.backgroundImageUrl ?? state.backgroundImageUrl,
           backgroundImageOpacity: appearance?.backgroundImageOpacity ?? state.backgroundImageOpacity,
           backgroundColor: appearance?.backgroundColor ?? state.backgroundColor,
+          spoilerBlur: normalizeSpoilerBlur(appearance?.spoilerBlur ?? state.spoilerBlur),
           history: pushHistory(state),
         }))
       },
@@ -648,6 +667,7 @@ export const useConversationStore = create<ConversationStore>()(
             backgroundImageUrl: previous.backgroundImageUrl,
             backgroundImageOpacity: previous.backgroundImageOpacity,
             backgroundColor: previous.backgroundColor,
+            spoilerBlur: previous.spoilerBlur,
             exportSettings: previous.exportSettings,
             history: {
               past: state.history.past.slice(0, -1),
@@ -667,6 +687,7 @@ export const useConversationStore = create<ConversationStore>()(
             backgroundImageUrl: next.backgroundImageUrl,
             backgroundImageOpacity: next.backgroundImageOpacity,
             backgroundColor: next.backgroundColor,
+            spoilerBlur: next.spoilerBlur,
             exportSettings: next.exportSettings,
             history: {
               past: [...state.history.past, buildSnapshot(state)].slice(-HISTORY_LIMIT),
@@ -708,6 +729,7 @@ export const useConversationStore = create<ConversationStore>()(
             backgroundImageUrl: "",
             backgroundImageOpacity: 0.35,
             backgroundColor: "",
+            spoilerBlur: DEFAULT_SPOILER_BLUR,
             exportSettings: defaultExportSettings,
             ui: defaultUiState,
             history: { past: [], future: [] },
@@ -727,6 +749,7 @@ export const useConversationStore = create<ConversationStore>()(
           backgroundImageUrl: state.backgroundImageUrl ?? "",
           backgroundImageOpacity: state.backgroundImageOpacity ?? 0.35,
           backgroundColor: state.backgroundColor ?? "",
+          spoilerBlur: normalizeSpoilerBlur(state.spoilerBlur),
           exportSettings: {
             ...defaultExportSettings,
             ...state.exportSettings,
@@ -745,6 +768,7 @@ export const useConversationStore = create<ConversationStore>()(
         backgroundImageUrl: state.backgroundImageUrl,
         backgroundImageOpacity: state.backgroundImageOpacity,
         backgroundColor: state.backgroundColor,
+        spoilerBlur: state.spoilerBlur,
         exportSettings: state.exportSettings,
         lastAutosaveAt: state.lastAutosaveAt,
       }),
