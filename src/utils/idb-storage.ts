@@ -8,16 +8,22 @@ const LEGACY_STORAGE_KEY = "chat-sim-storage"
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null
 
-const describePersistedValue = (value: StorageValue<unknown>) => {
-  const persistedState = isRecord(value.state) ? value.state : null
-
-  return {
-    hasConversation: Boolean(persistedState?.conversation),
-    hasBackgroundImageUrl: Boolean(persistedState?.backgroundImageUrl),
-    hasBackgroundColor: Boolean(persistedState?.backgroundColor),
-    hasBackgroundOpacity:
-      persistedState !== null && "backgroundImageOpacity" in persistedState,
+const areStorageValuesShallowEqual = (
+  previous: StorageValue<unknown> | null,
+  next: StorageValue<unknown>,
+) => {
+  if (!previous || previous.version !== next.version) return false
+  if (!isRecord(previous.state) || !isRecord(next.state)) {
+    return previous.state === next.state
   }
+
+  const previousState = previous.state
+  const nextState = next.state
+  const previousKeys = Object.keys(previousState)
+  const nextKeys = Object.keys(nextState)
+  if (previousKeys.length !== nextKeys.length) return false
+
+  return previousKeys.every((key) => previousState[key] === nextState[key])
 }
 
 const waitForTransaction = (transaction: IDBTransaction, message: string) =>
@@ -40,6 +46,7 @@ const waitForTransaction = (transaction: IDBTransaction, message: string) =>
 export const createIndexedDBStorage = (): PersistStorage<unknown> => {
   let dbPromise: Promise<IDBDatabase> | null = null
   let migrated = false
+  let lastSavedValue: StorageValue<unknown> | null = null
 
   const getDB = async (): Promise<IDBDatabase> => {
     if (dbPromise) return dbPromise
@@ -82,6 +89,7 @@ export const createIndexedDBStorage = (): PersistStorage<unknown> => {
 
       store.put(parsedData, name)
       await waitForTransaction(transaction, "Failed to migrate data to IndexedDB")
+      lastSavedValue = parsedData
       localStorage.removeItem(LEGACY_STORAGE_KEY)
     } catch (error) {
       console.error("Migration from localStorage failed:", error)
@@ -110,11 +118,13 @@ export const createIndexedDBStorage = (): PersistStorage<unknown> => {
           request.onsuccess = () => {
             const result = request.result
             if (result === undefined) {
+              lastSavedValue = null
               resolve(null)
               return
             }
 
-            resolve(result as StorageValue<unknown>)
+            lastSavedValue = result as StorageValue<unknown>
+            resolve(lastSavedValue)
           }
         })
       } catch (error) {
@@ -125,13 +135,17 @@ export const createIndexedDBStorage = (): PersistStorage<unknown> => {
 
     setItem: async (name, value) => {
       try {
+        if (areStorageValuesShallowEqual(lastSavedValue, value)) {
+          return
+        }
+
         const db = await getDB()
         const transaction = db.transaction([STORE_NAME], "readwrite")
         const store = transaction.objectStore(STORE_NAME)
 
         store.put(value, name)
         await waitForTransaction(transaction, "IndexedDB setItem error")
-        console.log(`Saved state to IndexedDB for key: ${name}`, describePersistedValue(value))
+        lastSavedValue = value
       } catch (error) {
         console.error("IndexedDB setItem error:", error)
         throw error
@@ -146,6 +160,7 @@ export const createIndexedDBStorage = (): PersistStorage<unknown> => {
 
         store.delete(name)
         await waitForTransaction(transaction, "IndexedDB removeItem error")
+        lastSavedValue = null
       } catch (error) {
         console.error("IndexedDB removeItem error:", error)
       }

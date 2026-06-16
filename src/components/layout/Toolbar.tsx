@@ -121,7 +121,7 @@ export const Toolbar = () => {
 
   return (
     <TooltipProvider>
-      <div className="workspace-toolbar-shadow flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))]/85 px-4 py-3 backdrop-blur">
+      <div className="workspace-toolbar-shadow flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3">
         <div className="flex w-full items-center gap-3 sm:w-auto">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[hsl(var(--primary))] text-xs font-semibold uppercase tracking-widest text-[hsl(var(--primary-foreground))]">
             CS

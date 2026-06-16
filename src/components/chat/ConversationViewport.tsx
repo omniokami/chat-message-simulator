@@ -87,7 +87,7 @@ export const ConversationViewport = ({
     <div
       ref={containerRef}
       className={cn(
-        "flex h-full min-h-0 items-center justify-center rounded-3xl border border-dashed border-[hsl(var(--border))] bg-[hsl(var(--muted))] p-4",
+        "workspace-perf-contained flex h-full min-h-0 items-center justify-center rounded-3xl border border-dashed border-[hsl(var(--border))] bg-[hsl(var(--muted))] p-4",
         className,
       )}
     >
@@ -173,7 +173,7 @@ export const ConversationViewportControls = ({
 }: ConversationViewportControlsProps) => (
   <div
     className={cn(
-      "flex w-full items-center gap-x-6 gap-y-2 overflow-x-auto pb-1 sm:w-auto sm:flex-wrap",
+      "flex min-h-9 w-full items-center gap-x-6 gap-y-2 overflow-x-auto pb-1 sm:w-auto sm:flex-wrap",
       className,
     )}
   >
@@ -205,20 +205,34 @@ export const ConversationViewportControls = ({
     <div className="flex shrink-0 items-center gap-2">
       <Button variant="outline" size="sm" onClick={onToggleChrome}>
         {showChrome ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-        <span className="hidden sm:inline">{showChrome ? "Hide chrome" : "Show chrome"}</span>
+        <span className="hidden min-w-[5.8rem] text-left sm:inline">
+          {showChrome ? "Hide chrome" : "Show chrome"}
+        </span>
       </Button>
-      {hasLongConversation ? (
-        <>
-          <Button variant="outline" size="sm" onClick={() => onJump("top")}>
-            <ArrowUpToLine className="h-4 w-4" />
-            <span className="hidden sm:inline">To top</span>
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => onJump("bottom")}>
-            <ArrowDownToLine className="h-4 w-4" />
-            <span className="hidden sm:inline">To bottom</span>
-          </Button>
-        </>
-      ) : null}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => onJump("top")}
+        disabled={!hasLongConversation}
+        aria-hidden={!hasLongConversation}
+        tabIndex={hasLongConversation ? undefined : -1}
+        className={cn(!hasLongConversation && "invisible")}
+      >
+        <ArrowUpToLine className="h-4 w-4" />
+        <span className="hidden sm:inline">To top</span>
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => onJump("bottom")}
+        disabled={!hasLongConversation}
+        aria-hidden={!hasLongConversation}
+        tabIndex={hasLongConversation ? undefined : -1}
+        className={cn(!hasLongConversation && "invisible")}
+      >
+        <ArrowDownToLine className="h-4 w-4" />
+        <span className="hidden sm:inline">To bottom</span>
+      </Button>
     </div>
   </div>
 )
@@ -240,10 +254,21 @@ export const ConversationViewportStatus = ({
   suffix,
   className,
 }: ConversationViewportStatusProps) => (
-  <div className={cn("flex flex-wrap items-center gap-2 text-xs text-[hsl(var(--muted-foreground))]", className)}>
+  <div
+    className={cn(
+      "flex min-h-5 items-center gap-2 overflow-hidden text-xs text-[hsl(var(--muted-foreground))]",
+      className,
+    )}
+  >
     <SquareStack className="h-4 w-4" />
-    Zoom {Math.round(appliedScale * 100)}%
-    {autoFit ? " (auto-fit)" : ""} - Export size {width} x {height}
-    {suffix ? ` - ${suffix}` : ""}
+    <span className="min-w-[6.25rem] shrink-0 tabular-nums">
+      Zoom {Math.round(appliedScale * 100)}%{autoFit ? " (auto-fit)" : ""}
+    </span>
+    <span className="min-w-[9rem] shrink-0 tabular-nums">
+      - Export size {width} x {height}
+    </span>
+    <span className={cn("min-w-[6.5rem] shrink-0", !suffix && "invisible")}>
+      {suffix ? `- ${suffix}` : "- all messages"}
+    </span>
   </div>
 )

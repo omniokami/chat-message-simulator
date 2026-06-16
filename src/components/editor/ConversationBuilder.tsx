@@ -371,6 +371,8 @@ export const ConversationBuilder = () => {
       senderId: string
       content: string
       imageUrl?: string
+      imageWidth?: number
+      imageHeight?: number
       timestamp: string
       type: Message["type"]
       status: Message["status"]

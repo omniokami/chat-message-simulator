@@ -29,8 +29,10 @@ const READER_MAX_SCALE = Number.POSITIVE_INFINITY
 
 export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderModeProps) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const wasOpenRef = useRef(open)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [readerZoom, setReaderZoom] = useState(READER_DEFAULT_ZOOM)
+  const [isViewportMounted, setIsViewportMounted] = useState(false)
   const conversation = useConversationStore((state) => state.conversation)
   const layoutId = useConversationStore((state) => state.layoutId)
   const themeId = useConversationStore((state) => state.themeId)
@@ -44,8 +46,27 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
   const loadConversation = useConversationStore((state) => state.loadConversation)
 
   useEffect(() => {
-    if (open) {
-      setReaderZoom(READER_DEFAULT_ZOOM)
+    if (!open) {
+      setIsViewportMounted(false)
+      wasOpenRef.current = false
+      return
+    }
+
+    setReaderZoom(READER_DEFAULT_ZOOM)
+    setIsViewportMounted(false)
+
+    let secondFrame = 0
+    const firstFrame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(() => setIsViewportMounted(true))
+    })
+
+    wasOpenRef.current = true
+
+    return () => {
+      window.cancelAnimationFrame(firstFrame)
+      if (secondFrame) {
+        window.cancelAnimationFrame(secondFrame)
+      }
     }
   }, [open])
 
@@ -99,6 +120,8 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
     measurementKey,
   })
   const shouldShowJumpControls = hasLongConversation ?? readerViewport.hasLongConversation
+  const isOpening = open && !wasOpenRef.current
+  const shouldRenderViewport = open && isViewportMounted && !isOpening
 
   const enterEditMode = () => {
     setUi({ activeView: "editor", isSidebarOpen: true })
@@ -107,7 +130,10 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="inset-0 left-0 top-0 flex h-[100dvh] max-h-[100dvh] min-h-0 w-screen max-w-none translate-x-0 translate-y-0 flex-col overflow-hidden rounded-none border-0 bg-[hsl(var(--background))] p-0">
+      <DialogContent
+        className="inset-0 left-0 top-0 flex h-[100dvh] max-h-[100dvh] min-h-0 w-screen max-w-none translate-x-0 translate-y-0 flex-col overflow-hidden rounded-none border-0 bg-[hsl(var(--background))] p-0"
+        overlayClassName="bg-transparent backdrop-blur-none"
+      >
         <DialogTitle className="sr-only">Reader mode</DialogTitle>
         <DialogDescription className="sr-only">
           Fullscreen conversation reader.
@@ -158,20 +184,24 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
             </div>
           </header>
           <main className="min-h-0 flex-1 overflow-hidden">
-            <ConversationViewport
-              viewport={readerViewport}
-              conversation={conversation}
-              layout={layout}
-              theme={theme}
-              showChrome={ui.showChrome}
-              activeParticipantId={activeParticipantId}
-              backgroundImageUrl={backgroundImageUrl}
-              backgroundImageOpacity={backgroundImageOpacity}
-              backgroundColor={backgroundColor}
-              className="h-full rounded-none border-0 bg-[hsl(var(--background))] p-0"
-              scrollClassName="overflow-hidden"
-              fitToFrame
-            />
+            {shouldRenderViewport ? (
+              <ConversationViewport
+                viewport={readerViewport}
+                conversation={conversation}
+                layout={layout}
+                theme={theme}
+                showChrome={ui.showChrome}
+                activeParticipantId={activeParticipantId}
+                backgroundImageUrl={backgroundImageUrl}
+                backgroundImageOpacity={backgroundImageOpacity}
+                backgroundColor={backgroundColor}
+                className="h-full rounded-none border-0 bg-[hsl(var(--background))] p-0"
+                scrollClassName="overflow-hidden"
+                fitToFrame
+              />
+            ) : (
+              <div className="h-full bg-[hsl(var(--background))]" aria-hidden="true" />
+            )}
           </main>
           <input
             ref={fileInputRef}

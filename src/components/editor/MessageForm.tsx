@@ -24,6 +24,8 @@ interface MessageFormProps {
     senderId: string
     content: string
     imageUrl?: string
+    imageWidth?: number
+    imageHeight?: number
     timestamp: string
     type: Message["type"]
     status: Message["status"]
@@ -47,6 +49,22 @@ const toInputValue = (iso: string) => {
 
 const fromInputValue = (value: string) => new Date(value).toISOString()
 
+const readImageDimensions = (src: string): Promise<{ width: number; height: number }> =>
+  new Promise((resolve, reject) => {
+    const image = new Image()
+    image.onload = () => {
+      const width = image.naturalWidth || image.width
+      const height = image.naturalHeight || image.height
+      if (!width || !height) {
+        reject(new Error("Image dimensions unavailable."))
+        return
+      }
+      resolve({ width, height })
+    }
+    image.onerror = () => reject(new Error("Image dimensions unavailable."))
+    image.src = src
+  })
+
 export const MessageForm = ({
   participants,
   initial,
@@ -69,6 +87,13 @@ export const MessageForm = ({
   const [type, setType] = useState<Message["type"]>(initial?.type ?? "text")
   const [status, setStatus] = useState<Message["status"]>(initial?.status ?? "sent")
   const [imageUrl, setImageUrl] = useState(initial?.imageUrl ?? "")
+  const [imageDimensions, setImageDimensions] = useState<{
+    width?: number
+    height?: number
+  }>({
+    width: initial?.imageWidth,
+    height: initial?.imageHeight,
+  })
   const [isSpoiler, setIsSpoiler] = useState(Boolean(initial?.imageUrl && initial?.isSpoiler))
   const [imageError, setImageError] = useState<string | null>(null)
   const showAdvanced = advancedOpen ?? true
@@ -135,7 +160,9 @@ export const MessageForm = ({
     }
     try {
       const dataUrl = await readFileAsDataUrl(file)
+      const dimensions = await readImageDimensions(dataUrl).catch(() => ({}))
       setImageUrl(dataUrl)
+      setImageDimensions(dimensions)
       setImageError(null)
     } catch (error) {
       console.error("Failed to read image file", error)
@@ -156,6 +183,8 @@ export const MessageForm = ({
           senderId,
           content,
           imageUrl: type === "image" ? imageUrl : undefined,
+          imageWidth: type === "image" && imageUrl ? imageDimensions.width : undefined,
+          imageHeight: type === "image" && imageUrl ? imageDimensions.height : undefined,
           isSpoiler: type === "image" && imageUrl ? isSpoiler : undefined,
           timestamp: fromInputValue(timestamp),
           type,
@@ -168,6 +197,7 @@ export const MessageForm = ({
           setStatus("sent")
           setSenderId(resolveSenderId(defaultSenderId, participants))
           setImageUrl("")
+          setImageDimensions({})
           setIsSpoiler(false)
           setImageError(null)
         }
@@ -229,6 +259,7 @@ export const MessageForm = ({
                   size="sm"
                   onClick={() => {
                     setImageUrl("")
+                    setImageDimensions({})
                     setIsSpoiler(false)
                   }}
                 >

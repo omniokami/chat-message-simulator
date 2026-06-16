@@ -6,6 +6,8 @@ export interface Message {
   senderId: string
   content: string
   imageUrl?: string
+  imageWidth?: number
+  imageHeight?: number
   timestamp: string
   type: MessageType
   status: MessageStatus

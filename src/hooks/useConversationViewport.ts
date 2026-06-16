@@ -78,23 +78,23 @@ export const useConversationViewport = ({
 
   const containerRef = useCallback<RefCallback<HTMLDivElement>>((node) => {
     containerElementRef.current = node
-    setContainerElement(node)
+    setContainerElement((current) => (current === node ? current : node))
   }, [])
   const scrollRef = useCallback<RefCallback<HTMLDivElement>>((node) => {
     scrollElementRef.current = node
-    setScrollElement(node)
+    setScrollElement((current) => (current === node ? current : node))
   }, [])
   const exportRef = useCallback<RefCallback<HTMLDivElement>>((node) => {
     exportElementRef.current = node
-    setExportElement(node)
+    setExportElement((current) => (current === node ? current : node))
   }, [])
   const conversationContainerRef = useCallback<RefCallback<HTMLDivElement>>((node) => {
     conversationContainerElementRef.current = node
-    setConversationContainerElement(node)
+    setConversationContainerElement((current) => (current === node ? current : node))
   }, [])
   const conversationContentRef = useCallback<RefCallback<HTMLDivElement>>((node) => {
     conversationContentElementRef.current = node
-    setConversationContentElement(node)
+    setConversationContentElement((current) => (current === node ? current : node))
   }, [])
 
   useLayoutEffect(() => {
@@ -111,7 +111,8 @@ export const useConversationViewport = ({
       const scaleX = availableWidth / width
       const scaleY = availableHeight / height
       const nextScale = Math.min(scaleX, scaleY, maxFitScale)
-      setFitScale(nextScale > 0 ? nextScale : 1)
+      const normalizedScale = nextScale > 0 ? nextScale : 1
+      setFitScale((current) => (current === normalizedScale ? current : normalizedScale))
     }
     const scheduleUpdateScale = () => {
       if (frame) {
@@ -121,7 +122,6 @@ export const useConversationViewport = ({
     }
 
     updateScale()
-    scheduleUpdateScale()
     const observer = new ResizeObserver(scheduleUpdateScale)
     observer.observe(element)
     window.addEventListener("resize", scheduleUpdateScale)
@@ -182,21 +182,16 @@ export const useConversationViewport = ({
     observer.observe(content)
     observer.observe(exportElement)
 
-    const images = Array.from(content.querySelectorAll("img"))
-    images.forEach((image) => {
-      image.addEventListener("load", scheduleMeasure)
-      image.addEventListener("error", scheduleMeasure)
-    })
+    content.addEventListener("load", scheduleMeasure, true)
+    content.addEventListener("error", scheduleMeasure, true)
 
     return () => {
       if (frame) {
         cancelAnimationFrame(frame)
       }
       observer.disconnect()
-      images.forEach((image) => {
-        image.removeEventListener("load", scheduleMeasure)
-        image.removeEventListener("error", scheduleMeasure)
-      })
+      content.removeEventListener("load", scheduleMeasure, true)
+      content.removeEventListener("error", scheduleMeasure, true)
     }
   }, [
     conversationContainerElement,

@@ -244,7 +244,7 @@ export const MainLayout = () => {
       <div className="workspace-stack mx-auto flex flex-col gap-6 px-4 pt-6 pb-24 lg:pb-6">
         <Toolbar />
 
-        <Card>
+        <Card className="workspace-perf-contained">
           <CardContent className="space-y-3 py-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -302,7 +302,7 @@ export const MainLayout = () => {
               ui.isSidebarOpen && ui.activeView !== "preview" ? "block" : "hidden",
             )}
           >
-            <Card>
+            <Card className="workspace-perf-contained">
               <CardContent className="space-y-6">
                 {ui.activePanel === "participants" ? <ParticipantManager /> : null}
                 {ui.activePanel === "messages" ? <ConversationBuilder /> : null}
@@ -328,7 +328,7 @@ export const MainLayout = () => {
           </aside>
 
           <main className={cn("space-y-4", ui.activeView === "editor" && "hidden lg:block")}>
-            <Card>
+            <Card className="workspace-perf-contained">
               <CardHeader className="space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>

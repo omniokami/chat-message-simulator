@@ -43,13 +43,13 @@ export const MessageInput = ({ placeholder = "Message", layout }: MessageInputPr
   return (
     <div
       className={cn(
-        "relative z-10 flex items-center gap-2 border-t border-white/10 px-3 py-2",
-        isWhatsApp && "gap-1.5 border-black/5 px-2.5 py-2",
-        isIMessage && "border-black/5 px-3 py-2",
-        isSnapchat && "gap-2 border-black/5 px-3 py-2",
-        isMessenger && "gap-2 border-black/5 px-3 py-2",
-        isInstagram && "gap-2 border-[var(--chat-border)] px-3 py-2",
-        isTinder && "gap-2.5 border-black/5 px-4 py-3",
+        "relative z-10 flex min-h-14 shrink-0 items-center gap-2 border-t border-white/10 px-3 py-2",
+        isWhatsApp && "min-h-14 gap-1.5 border-black/5 px-2.5 py-2",
+        isIMessage && "min-h-14 border-black/5 px-3 py-2",
+        isSnapchat && "min-h-14 gap-2 border-black/5 px-3 py-2",
+        isMessenger && "min-h-14 gap-2 border-black/5 px-3 py-2",
+        isInstagram && "min-h-14 gap-2 border-[var(--chat-border)] px-3 py-2",
+        isTinder && "min-h-16 gap-2.5 border-black/5 px-4 py-3",
       )}
       style={{ backgroundColor: "var(--chat-input)" }}
     >

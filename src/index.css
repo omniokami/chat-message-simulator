@@ -58,6 +58,10 @@
     border-color: hsl(var(--border));
   }
 
+  html {
+    scrollbar-gutter: stable;
+  }
+
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
@@ -84,6 +88,7 @@
 
 .workspace-surface-shadow,
 .workspace-toolbar-shadow {
+  contain: paint;
   position: relative;
   box-shadow: none;
 }
@@ -103,7 +108,16 @@
 }
 
 .workspace-toolbar-shadow::before {
-  box-shadow: 0 20px 45px rgba(2, 8, 23, 0.35);
+  box-shadow: 0 10px 28px rgba(2, 8, 23, 0.18);
+}
+
+.workspace-perf-contained {
+  contain: layout paint;
+}
+
+.workspace-lazy-section {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 720px;
 }
 
 .hide-scrollbar {

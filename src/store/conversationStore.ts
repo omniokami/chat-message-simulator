@@ -91,6 +91,8 @@ interface ConversationStore {
     senderId: string
     content: string
     imageUrl?: string
+    imageWidth?: number
+    imageHeight?: number
     timestamp: string
     type: MessageType
     status: MessageStatus
@@ -588,7 +590,15 @@ export const useConversationStore = create<ConversationStore>()(
           },
           history: pushHistory(state),
         })),
-      setUi: (updates) => set((state) => ({ ui: { ...state.ui, ...updates }, history: pushHistory(state) })),
+      setUi: (updates) =>
+        set((state) => {
+          const nextUi = { ...state.ui, ...updates }
+          const hasChanged = Object.keys(updates).some((key) => {
+            const uiKey = key as keyof UiState
+            return state.ui[uiKey] !== nextUi[uiKey]
+          })
+          return hasChanged ? { ui: nextUi } : state
+        }),
       resetConversation: () =>
         set((state) => ({
           conversation: buildDefaultConversation(),
@@ -721,8 +731,8 @@ export const useConversationStore = create<ConversationStore>()(
             ...defaultExportSettings,
             ...state.exportSettings,
           },
-          ui: state.ui ?? defaultUiState,
-          history: state.history ?? { past: [], future: [] },
+          ui: defaultUiState,
+          history: { past: [], future: [] },
           lastAutosaveAt: state.lastAutosaveAt ?? null,
         } as unknown as ConversationStore
       },
@@ -736,8 +746,6 @@ export const useConversationStore = create<ConversationStore>()(
         backgroundImageOpacity: state.backgroundImageOpacity,
         backgroundColor: state.backgroundColor,
         exportSettings: state.exportSettings,
-        ui: state.ui,
-        history: state.history,
         lastAutosaveAt: state.lastAutosaveAt,
       }),
     },

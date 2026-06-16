@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Check, CheckCheck, EyeOff } from "lucide-react"
 import type { Message } from "@/types/message"
 import type { Participant } from "@/types/conversation"
@@ -46,6 +46,8 @@ const statusIcon = (status: Message["status"], className?: string) => {
 }
 
 const shouldUseObjectUrl = (url?: string): url is string => Boolean(url?.startsWith("data:image/"))
+const MAX_MESSAGE_IMAGE_WIDTH = 240
+const MAX_MESSAGE_IMAGE_HEIGHT = 256
 
 export const MessageBubble = ({
   message,
@@ -91,14 +93,27 @@ export const MessageBubble = ({
     })
   const showSpoiler = message.type === "image" && Boolean(message.imageUrl && message.isSpoiler)
   const isSpoilerCovered = showSpoiler && !isSpoilerRevealed
-  const [imageObjectUrl, setImageObjectUrl] = useState<{
+  const hasImageDimensions = Boolean(
+    message.imageWidth && message.imageWidth > 0 && message.imageHeight && message.imageHeight > 0,
+  )
+  const imageWidth = hasImageDimensions ? message.imageWidth : undefined
+  const imageHeight = hasImageDimensions ? message.imageHeight : undefined
+  const imageScale =
+    imageWidth && imageHeight
+      ? Math.min(MAX_MESSAGE_IMAGE_WIDTH / imageWidth, MAX_MESSAGE_IMAGE_HEIGHT / imageHeight)
+      : 1
+  const imageFrameStyle: React.CSSProperties | undefined =
+    imageWidth && imageHeight
+      ? {
+          width: Math.round(imageWidth * imageScale),
+          height: Math.round(imageHeight * imageScale),
+        }
+      : undefined
+  const imageRef = useRef<HTMLImageElement | null>(null)
+  const imageObjectUrlRef = useRef<{
     source?: string
     url?: string
   }>({})
-  const renderedImageUrl =
-    imageObjectUrl.source === message.imageUrl && imageObjectUrl.url
-      ? imageObjectUrl.url
-      : message.imageUrl
   const showBubbleSideError = showInstagramError || showIMessageError
   const showMessengerAvatar = isMessenger && !isOwn && Boolean(showAvatar)
   const showInstagramAvatar = isInstagram && !isOwn && Boolean(showAvatar)
@@ -146,27 +161,49 @@ export const MessageBubble = ({
     color: textColor,
   }
 
-  useEffect(() => {
+  const prepareImageObjectUrl = () => {
     const source = message.imageUrl
     if (!shouldUseObjectUrl(source)) return
 
-    let isActive = true
-    let objectUrl = ""
+    const prepared = imageObjectUrlRef.current
+    if (prepared.source === source) {
+      const image = imageRef.current
+      if (prepared.url && image && image.src !== prepared.url) {
+        image.src = prepared.url
+      }
+      return
+    }
+
+    if (prepared.url) {
+      URL.revokeObjectURL(prepared.url)
+    }
+    imageObjectUrlRef.current = { source }
 
     fetch(source)
       .then((response) => response.blob())
       .then((blob) => {
-        if (!isActive) return
-        objectUrl = URL.createObjectURL(blob)
-        setImageObjectUrl({ source, url: objectUrl })
+        if (imageObjectUrlRef.current.source !== source) return
+        const objectUrl = URL.createObjectURL(blob)
+        imageObjectUrlRef.current = { source, url: objectUrl }
+        if (imageRef.current && message.imageUrl === source) {
+          imageRef.current.src = objectUrl
+        }
       })
       .catch((error) => {
         console.error("Failed to prepare image object URL", error)
+        if (imageObjectUrlRef.current.source === source) {
+          imageObjectUrlRef.current = {}
+        }
       })
+  }
 
+  useEffect(() => {
     return () => {
-      isActive = false
-      if (objectUrl) URL.revokeObjectURL(objectUrl)
+      const prepared = imageObjectUrlRef.current
+      if (prepared.url) {
+        URL.revokeObjectURL(prepared.url)
+      }
+      imageObjectUrlRef.current = {}
     }
   }, [message.imageUrl])
 
@@ -277,11 +314,13 @@ export const MessageBubble = ({
           {message.imageUrl ? (
             <div
               className={cn(
-                "relative max-w-[240px] overflow-hidden border border-white/20",
+                "relative w-fit max-w-[240px] overflow-hidden border border-white/20",
                 isSpoilerCovered && "cursor-pointer",
                 imageRadius,
               )}
+              style={imageFrameStyle}
               onClick={isSpoilerCovered ? () => setSpoilerRevealed(true) : undefined}
+              onContextMenu={prepareImageObjectUrl}
               onKeyDown={
                 isSpoilerCovered
                   ? (event) => {
@@ -296,10 +335,16 @@ export const MessageBubble = ({
               aria-label={isSpoilerCovered ? "Reveal spoiler image" : undefined}
             >
               <img
-                src={renderedImageUrl}
+                ref={imageRef}
+                src={message.imageUrl}
+                width={imageWidth}
+                height={imageHeight}
                 alt={message.content || "Uploaded message"}
                 className={cn(
-                  "block max-h-64 w-full object-cover transition-[filter,transform] duration-500 ease-out",
+                  "block transition-[filter,transform] duration-500 ease-out",
+                  imageFrameStyle
+                    ? "h-full w-full object-cover"
+                    : "max-h-64 max-w-[240px] object-contain",
                   isSpoilerCovered && "scale-[1.03] blur-md",
                 )}
               />
