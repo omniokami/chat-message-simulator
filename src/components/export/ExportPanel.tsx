@@ -209,20 +209,20 @@ export const ExportPanel = ({
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-3 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2">
             <div className="text-sm font-medium text-[hsl(var(--foreground))]">
-              Reveal all image spoilers
-            </div>
-            <Switch
-              checked={exportSettings.revealImageSpoilers}
-              onCheckedChange={(value) => setExportSettings({ revealImageSpoilers: value })}
-            />
-          </div>
-          <div className="flex items-center justify-between gap-3 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2">
-            <div className="text-sm font-medium text-[hsl(var(--foreground))]">
               Spoiler icon on revealed images
             </div>
             <Switch
               checked={exportSettings.showSpoilerIconOnRevealedImages}
               onCheckedChange={(value) => setExportSettings({ showSpoilerIconOnRevealedImages: value })}
+            />
+          </div>
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2">
+            <div className="text-sm font-medium text-[hsl(var(--foreground))]">
+              Reveal all image spoilers
+            </div>
+            <Switch
+              checked={exportSettings.revealImageSpoilers}
+              onCheckedChange={(value) => setExportSettings({ revealImageSpoilers: value })}
             />
           </div>
         </div>
