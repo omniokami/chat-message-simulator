@@ -111,9 +111,11 @@ export const Toolbar = () => {
     : "Autosave idle"
   const layout = getLayoutConfig(layoutId)
   const theme = layout.themes.find((entry) => entry.id === themeId) ?? layout.themes[0]
+  const imageMessageCount = conversation.messages.filter((message) => message.type === "image").length
   const projectBadges = [
     `${conversation.participants.length} participants`,
     `${conversation.messages.length} messages`,
+    `${imageMessageCount} images`,
     `${layout.name} ${theme.name}`,
   ]
 
