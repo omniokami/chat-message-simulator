@@ -1,14 +1,15 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useId, useRef, useState } from "react"
 import type { Message } from "@/types/message"
 import type { Participant } from "@/types/conversation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/utils/cn"
 import { readFileAsDataUrl } from "@/utils/helpers"
-import { Clipboard, ImagePlus, X } from "lucide-react"
+import { Clipboard, EyeOff, ImagePlus, X } from "lucide-react"
 
 interface MessageFormProps {
   participants: Participant[]
@@ -26,6 +27,7 @@ interface MessageFormProps {
     timestamp: string
     type: Message["type"]
     status: Message["status"]
+    isSpoiler?: boolean
   }) => void
   onCancel?: () => void
 }
@@ -67,9 +69,11 @@ export const MessageForm = ({
   const [type, setType] = useState<Message["type"]>(initial?.type ?? "text")
   const [status, setStatus] = useState<Message["status"]>(initial?.status ?? "sent")
   const [imageUrl, setImageUrl] = useState(initial?.imageUrl ?? "")
+  const [isSpoiler, setIsSpoiler] = useState(Boolean(initial?.imageUrl && initial?.isSpoiler))
   const [imageError, setImageError] = useState<string | null>(null)
   const showAdvanced = advancedOpen ?? true
   const showAdvancedToggle = typeof advancedOpen === "boolean" && typeof onToggleAdvanced === "function"
+  const spoilerSwitchId = useId()
   const previousDefaultRef = useRef(defaultSenderId)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -152,6 +156,7 @@ export const MessageForm = ({
           senderId,
           content,
           imageUrl: type === "image" ? imageUrl : undefined,
+          isSpoiler: type === "image" && imageUrl ? isSpoiler : undefined,
           timestamp: fromInputValue(timestamp),
           type,
           status,
@@ -163,6 +168,7 @@ export const MessageForm = ({
           setStatus("sent")
           setSenderId(resolveSenderId(defaultSenderId, participants))
           setImageUrl("")
+          setIsSpoiler(false)
           setImageError(null)
         }
       }}
@@ -196,7 +202,7 @@ export const MessageForm = ({
         <div className="space-y-2">
           <Label>Image upload</Label>
           <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2">
-            <div className="h-20 w-28 overflow-hidden rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))]">
+            <div className="min-h-20 w-28 self-stretch overflow-hidden rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))]">
               {imageUrl ? (
                 <img src={imageUrl} alt="Uploaded preview" className="h-full w-full object-cover" />
               ) : (
@@ -217,10 +223,40 @@ export const MessageForm = ({
                 Upload image
               </Button>
               {imageUrl ? (
-                <Button type="button" variant="ghost" size="sm" onClick={() => setImageUrl("")}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setImageUrl("")
+                    setIsSpoiler(false)
+                  }}
+                >
                   Remove
                 </Button>
               ) : null}
+              <div className={cn("flex items-center gap-2", !imageUrl && "opacity-60")}>
+                <Label
+                  htmlFor={spoilerSwitchId}
+                  className={cn(
+                    "flex items-center gap-1.5 text-xs font-medium text-[hsl(var(--muted-foreground))]",
+                    imageUrl ? "cursor-pointer" : "cursor-not-allowed",
+                  )}
+                >
+                  <EyeOff className="h-3.5 w-3.5" />
+                  Spoiler
+                </Label>
+                <Switch
+                  id={spoilerSwitchId}
+                  checked={Boolean(imageUrl && isSpoiler)}
+                  onCheckedChange={(value) => {
+                    if (!imageUrl) return
+                    setIsSpoiler(value)
+                  }}
+                  disabled={!imageUrl}
+                  className={cn(!imageUrl && "cursor-not-allowed")}
+                />
+              </div>
               <span className="text-xs text-[hsl(var(--muted-foreground))]">JPG, PNG, or WEBP up to 5MB.</span>
             </div>
             <input

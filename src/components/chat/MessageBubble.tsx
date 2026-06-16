@@ -1,4 +1,5 @@
-import { Check, CheckCheck } from "lucide-react"
+import { useEffect, useState } from "react"
+import { Check, CheckCheck, EyeOff } from "lucide-react"
 import type { Message } from "@/types/message"
 import type { Participant } from "@/types/conversation"
 import type { LayoutConfig } from "@/types/layout"
@@ -44,6 +45,8 @@ const statusIcon = (status: Message["status"], className?: string) => {
   return null
 }
 
+const shouldUseObjectUrl = (url?: string): url is string => Boolean(url?.startsWith("data:image/"))
+
 export const MessageBubble = ({
   message,
   sender,
@@ -65,6 +68,37 @@ export const MessageBubble = ({
   const showInstagramError = isInstagram && isOwn && isError
   const showSnapchatError = isSnapchat && isOwn && isError
   const showTinderError = isTinder && isOwn && isError
+  const [spoilerReveal, setSpoilerReveal] = useState({
+    imageUrl: message.imageUrl,
+    isRevealed: false,
+    isSpoiler: message.isSpoiler,
+    messageId: message.id,
+    type: message.type,
+  })
+  const isSpoilerRevealed =
+    spoilerReveal.messageId === message.id &&
+    spoilerReveal.imageUrl === message.imageUrl &&
+    spoilerReveal.isSpoiler === message.isSpoiler &&
+    spoilerReveal.type === message.type &&
+    spoilerReveal.isRevealed
+  const setSpoilerRevealed = (isRevealed: boolean) =>
+    setSpoilerReveal({
+      imageUrl: message.imageUrl,
+      isRevealed,
+      isSpoiler: message.isSpoiler,
+      messageId: message.id,
+      type: message.type,
+    })
+  const showSpoiler = message.type === "image" && Boolean(message.imageUrl && message.isSpoiler)
+  const isSpoilerCovered = showSpoiler && !isSpoilerRevealed
+  const [imageObjectUrl, setImageObjectUrl] = useState<{
+    source?: string
+    url?: string
+  }>({})
+  const renderedImageUrl =
+    imageObjectUrl.source === message.imageUrl && imageObjectUrl.url
+      ? imageObjectUrl.url
+      : message.imageUrl
   const showBubbleSideError = showInstagramError || showIMessageError
   const showMessengerAvatar = isMessenger && !isOwn && Boolean(showAvatar)
   const showInstagramAvatar = isInstagram && !isOwn && Boolean(showAvatar)
@@ -111,6 +145,30 @@ export const MessageBubble = ({
     backgroundColor: bubbleColor,
     color: textColor,
   }
+
+  useEffect(() => {
+    const source = message.imageUrl
+    if (!shouldUseObjectUrl(source)) return
+
+    let isActive = true
+    let objectUrl = ""
+
+    fetch(source)
+      .then((response) => response.blob())
+      .then((blob) => {
+        if (!isActive) return
+        objectUrl = URL.createObjectURL(blob)
+        setImageObjectUrl({ source, url: objectUrl })
+      })
+      .catch((error) => {
+        console.error("Failed to prepare image object URL", error)
+      })
+
+    return () => {
+      isActive = false
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
+  }, [message.imageUrl])
 
   if (isWhatsApp) {
     bubbleStyle["--bubble-color"] = bubbleColor
@@ -217,14 +275,61 @@ export const MessageBubble = ({
       {message.type === "image" ? (
         <div className="space-y-2">
           {message.imageUrl ? (
-            <img
-              src={message.imageUrl}
-              alt={message.content || "Uploaded message"}
+            <div
               className={cn(
-                "max-h-64 w-full max-w-[240px] border border-white/20 object-cover",
+                "relative max-w-[240px] overflow-hidden border border-white/20",
+                isSpoilerCovered && "cursor-pointer",
                 imageRadius,
               )}
-            />
+              onClick={isSpoilerCovered ? () => setSpoilerRevealed(true) : undefined}
+              onKeyDown={
+                isSpoilerCovered
+                  ? (event) => {
+                      if (event.key !== "Enter" && event.key !== " ") return
+                      event.preventDefault()
+                      setSpoilerRevealed(true)
+                    }
+                  : undefined
+              }
+              role={isSpoilerCovered ? "button" : undefined}
+              tabIndex={isSpoilerCovered ? 0 : undefined}
+              aria-label={isSpoilerCovered ? "Reveal spoiler image" : undefined}
+            >
+              <img
+                src={renderedImageUrl}
+                alt={message.content || "Uploaded message"}
+                className={cn(
+                  "block max-h-64 w-full object-cover transition-[filter,transform] duration-500 ease-out",
+                  isSpoilerCovered && "scale-[1.03] blur-md",
+                )}
+              />
+              {isSpoilerCovered ? (
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/25 text-white/80 transition-opacity"
+                >
+                  <span className="flex flex-col items-center gap-1 rounded-full bg-black/25 px-4 py-3 backdrop-blur-sm">
+                    <EyeOff className="h-7 w-7 opacity-80" />
+                    <span className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] opacity-80">
+                      spoiler
+                    </span>
+                  </span>
+                </div>
+              ) : null}
+              {showSpoiler && isSpoilerRevealed ? (
+                <button
+                  type="button"
+                  aria-label="Hide spoiler image"
+                  className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/45 text-white/80 shadow-sm backdrop-blur-sm transition-colors hover:bg-black/60"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    setSpoilerRevealed(false)
+                  }}
+                >
+                  <EyeOff className="h-4 w-4" />
+                </button>
+              ) : null}
+            </div>
           ) : (
             <div className="h-24 w-40 rounded-lg border border-white/20 bg-white/10" />
           )}

@@ -57,6 +57,10 @@ interface HistoryState {
   future: Snapshot[]
 }
 
+type PersistedStoreState = Partial<ConversationStore> & {
+  conversation?: Partial<Conversation> & { title?: string }
+}
+
 interface ConversationStore {
   conversation: Conversation
   layoutId: LayoutId
@@ -90,6 +94,7 @@ interface ConversationStore {
     timestamp: string
     type: MessageType
     status: MessageStatus
+    isSpoiler?: boolean
   }) => void
   updateMessage: (messageId: string, updates: Partial<Message>) => void
   deleteMessage: (messageId: string) => void
@@ -318,7 +323,7 @@ const pushHistory = (state: ConversationStore): HistoryState => {
 
 export const useConversationStore = create<ConversationStore>()(
   persist(
-    (set, _get) => ({
+    (set) => ({
       conversation: buildDefaultConversation(),
       layoutId: defaultLayoutId,
       themeId: "light",
@@ -680,8 +685,8 @@ export const useConversationStore = create<ConversationStore>()(
       name: STORAGE_KEY,
       storage: createIndexedDBStorage(),
       version: 4,
-      migrate: (_state: unknown, _version: number): ConversationStore => {
-        const state = _state as any
+      migrate: (persistedState: unknown): ConversationStore => {
+        const state = persistedState as PersistedStoreState | null
         if (!state) {
           const defaults = buildDefaultConversation()
           return {
@@ -697,7 +702,7 @@ export const useConversationStore = create<ConversationStore>()(
             ui: defaultUiState,
             history: { past: [], future: [] },
             lastAutosaveAt: null,
-          } as any
+          } as unknown as ConversationStore
         }
         return {
           conversation: state.conversation ? {
@@ -719,7 +724,7 @@ export const useConversationStore = create<ConversationStore>()(
           ui: state.ui ?? defaultUiState,
           history: state.history ?? { past: [], future: [] },
           lastAutosaveAt: state.lastAutosaveAt ?? null,
-        } as any
+        } as unknown as ConversationStore
       },
       partialize: (state) => ({
         conversation: state.conversation,

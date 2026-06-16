@@ -374,6 +374,7 @@ export const ConversationBuilder = () => {
       timestamp: string
       type: Message["type"]
       status: Message["status"]
+      isSpoiler?: boolean
     },
   ) => {
     const messageIndex = messages.findIndex((message) => message.id === messageId)

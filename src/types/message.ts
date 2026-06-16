@@ -10,4 +10,5 @@ export interface Message {
   type: MessageType
   status: MessageStatus
   isHidden?: boolean
+  isSpoiler?: boolean
 }
