@@ -782,7 +782,11 @@ export const MainLayout = () => {
         <div className="flex flex-wrap items-center justify-center gap-3">
           <div className="flex items-center gap-3 rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--card))]/85 px-4 py-2 shadow-sm backdrop-blur">
             <div className="flex items-center gap-2 text-xs">
-              <Sun
+              <span className="font-medium text-[hsl(var(--muted-foreground))]">
+                Theme
+              </span>
+            </div>
+            <Sun
                 className={cn(
                   "h-4 w-4 transition-colors",
                   isEditorDark
@@ -790,10 +794,6 @@ export const MainLayout = () => {
                     : "text-[hsl(var(--foreground))]",
                 )}
               />
-              <span className="font-medium text-[hsl(var(--muted-foreground))]">
-                Workspace theme
-              </span>
-            </div>
             <Switch
               checked={isEditorDark}
               onCheckedChange={(checked) => setEditorTheme(checked ? "dark" : "light")}
