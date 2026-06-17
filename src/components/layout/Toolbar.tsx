@@ -6,6 +6,7 @@ import { downloadJson, readJsonFile } from "@/utils/storage"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { getMessageImages } from "@/utils/messageImages"
 import {
   Dialog,
   DialogContent,
@@ -112,7 +113,10 @@ export const Toolbar = () => {
     : "Autosave idle"
   const layout = getLayoutConfig(layoutId)
   const theme = layout.themes.find((entry) => entry.id === themeId) ?? layout.themes[0]
-  const imageMessageCount = conversation.messages.filter((message) => message.type === "image").length
+  const imageMessageCount = conversation.messages.reduce(
+    (count, message) => count + getMessageImages(message).length,
+    0,
+  )
   const projectBadges = [
     `${conversation.participants.length} participants`,
     `${conversation.messages.length} messages`,

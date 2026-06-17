@@ -370,6 +370,7 @@ export const ConversationBuilder = () => {
     payload: {
       senderId: string
       content: string
+      images?: Message["images"]
       imageUrl?: string
       imageWidth?: number
       imageHeight?: number

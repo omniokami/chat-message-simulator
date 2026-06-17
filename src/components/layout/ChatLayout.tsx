@@ -18,7 +18,7 @@ interface ChatLayoutProps {
   conversationMode?: "scroll" | "expanded"
   conversationContainerRef?: React.Ref<HTMLDivElement>
   conversationContentRef?: React.Ref<HTMLDivElement>
-  onImageActivate?: (message: Conversation["messages"][number]) => void
+  onImageActivate?: (message: Conversation["messages"][number], imageId?: string) => void
 }
 
 const groupStatusLabel = (participants: Conversation["participants"]) => {

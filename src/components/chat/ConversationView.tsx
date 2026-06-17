@@ -14,7 +14,7 @@ interface ConversationViewProps {
   mode?: "scroll" | "expanded"
   containerRef?: React.Ref<HTMLDivElement>
   contentRef?: React.Ref<HTMLDivElement>
-  onImageActivate?: (message: Message) => void
+  onImageActivate?: (message: Message, imageId?: string) => void
 }
 
 export const ConversationView = ({

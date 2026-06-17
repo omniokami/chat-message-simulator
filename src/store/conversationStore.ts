@@ -98,6 +98,7 @@ interface ConversationStore {
   addMessage: (payload: {
     senderId: string
     content: string
+    images?: Message["images"]
     imageUrl?: string
     imageWidth?: number
     imageHeight?: number

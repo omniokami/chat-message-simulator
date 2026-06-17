@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState, type RefObject } from "react"
 import type { ReaderImageEntry } from "@/components/reader/ReaderImageViewer"
 import type { Conversation } from "@/types/conversation"
 import type { Message } from "@/types/message"
+import { getMessageImages } from "@/utils/messageImages"
 
 interface UseConversationImageViewerOptions {
   conversation: Conversation
@@ -18,13 +19,16 @@ export const useConversationImageViewer = ({
   const images = useMemo<ReaderImageEntry[]>(
     () =>
       conversation.messages
-        .filter(
-          (message) => !message.isHidden && message.type === "image" && Boolean(message.imageUrl),
-        )
-        .map((message) => ({
-          message,
-          sender: conversation.participants.find((participant) => participant.id === message.senderId),
-        })),
+        .filter((message) => !message.isHidden && message.type === "image")
+        .flatMap((message) => {
+          const sender = conversation.participants.find((participant) => participant.id === message.senderId)
+          return getMessageImages(message).map((image) => ({
+            id: `${message.id}:${image.id}`,
+            image,
+            message,
+            sender,
+          }))
+        }),
     [conversation.messages, conversation.participants],
   )
 
@@ -34,7 +38,7 @@ export const useConversationImageViewer = ({
   )
   const resolvedActiveImageId = useMemo(
     () =>
-      activeImageId && images.some((image) => image.message.id === activeImageId)
+      activeImageId && images.some((image) => image.id === activeImageId)
         ? activeImageId
         : null,
     [activeImageId, images],
@@ -42,10 +46,14 @@ export const useConversationImageViewer = ({
   const resolvedEnabledParticipantIds = resolvedActiveImageId ? enabledParticipantIds : []
 
   const openImageViewer = useCallback(
-    (message: Message) => {
-      if (message.type !== "image" || !message.imageUrl) return
+    (message: Message, imageId?: string) => {
+      if (message.type !== "image") return
+      const messageImages = getMessageImages(message)
+      const selectedImage =
+        messageImages.find((image) => image.id === imageId) ?? messageImages[0]
+      if (!selectedImage) return
       setEnabledParticipantIds(imageParticipantIds)
-      setActiveImageId(message.id)
+      setActiveImageId(`${message.id}:${selectedImage.id}`)
     },
     [imageParticipantIds],
   )

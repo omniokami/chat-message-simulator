@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react"
-import type { Message } from "@/types/message"
+import type { Message, MessageImage } from "@/types/message"
 import type { Participant } from "@/types/conversation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/utils/cn"
-import { readFileAsDataUrl } from "@/utils/helpers"
+import { generateId, readFileAsDataUrl } from "@/utils/helpers"
+import { getMessageImages, MAX_MESSAGE_IMAGES } from "@/utils/messageImages"
 import { Clipboard, EyeOff, ImagePlus, X } from "lucide-react"
 
 interface MessageFormProps {
@@ -23,6 +24,7 @@ interface MessageFormProps {
   onSubmit: (payload: {
     senderId: string
     content: string
+    images?: MessageImage[]
     imageUrl?: string
     imageWidth?: number
     imageHeight?: number
@@ -33,6 +35,16 @@ interface MessageFormProps {
     exportSpoiler?: boolean
   }) => void
   onCancel?: () => void
+}
+
+interface ImageUploadBlock {
+  blockId: string
+  imageId: string
+  url: string
+  width?: number
+  height?: number
+  isSpoiler: boolean
+  exportSpoiler: boolean
 }
 
 const resolveSenderId = (preferredId: string | undefined, participants: Participant[]) => {
@@ -66,6 +78,22 @@ const readImageDimensions = (src: string): Promise<{ width: number; height: numb
     image.src = src
   })
 
+const createImageUploadBlock = (image?: MessageImage): ImageUploadBlock => ({
+  blockId: generateId(),
+  imageId: image?.id ?? generateId(),
+  url: image?.url ?? "",
+  width: image?.width,
+  height: image?.height,
+  isSpoiler: Boolean(image?.url && image?.isSpoiler),
+  exportSpoiler: Boolean(image?.url && image?.isSpoiler && image?.exportSpoiler),
+})
+
+const buildInitialImageUploads = (initial?: Message | null): ImageUploadBlock[] => {
+  const images = initial ? getMessageImages(initial) : []
+  if (!images.length) return [createImageUploadBlock()]
+  return images.slice(0, MAX_MESSAGE_IMAGES).map(createImageUploadBlock)
+}
+
 export const MessageForm = ({
   participants,
   initial,
@@ -87,26 +115,19 @@ export const MessageForm = ({
   )
   const [type, setType] = useState<Message["type"]>(initial?.type ?? "text")
   const [status, setStatus] = useState<Message["status"]>(initial?.status ?? "sent")
-  const [imageUrl, setImageUrl] = useState(initial?.imageUrl ?? "")
-  const [imageDimensions, setImageDimensions] = useState<{
-    width?: number
-    height?: number
-  }>({
-    width: initial?.imageWidth,
-    height: initial?.imageHeight,
-  })
-  const [isSpoiler, setIsSpoiler] = useState(Boolean(initial?.imageUrl && initial?.isSpoiler))
-  const [exportSpoiler, setExportSpoiler] = useState(
-    Boolean(initial?.imageUrl && initial?.isSpoiler && initial?.exportSpoiler),
+  const [imageUploads, setImageUploads] = useState<ImageUploadBlock[]>(() =>
+    buildInitialImageUploads(initial),
   )
   const [imageError, setImageError] = useState<string | null>(null)
+  const [pendingFileInputBlockId, setPendingFileInputBlockId] = useState<string | null>(null)
   const showAdvanced = advancedOpen ?? true
   const showAdvancedToggle = typeof advancedOpen === "boolean" && typeof onToggleAdvanced === "function"
-  const spoilerSwitchId = useId()
-  const exportSpoilerSwitchId = useId()
+  const imageUploadId = useId()
   const previousDefaultRef = useRef(defaultSenderId)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
+  const uploadedImages = imageUploads.filter((upload) => Boolean(upload.url))
+  const hasUploadedImages = uploadedImages.length > 0
 
   useEffect(() => {
     if (initial) return
@@ -121,6 +142,12 @@ export const MessageForm = ({
       return current
     })
   }, [defaultSenderId, initial, participants])
+
+  useEffect(() => {
+    if (!pendingFileInputBlockId) return
+    fileInputRefs.current[pendingFileInputBlockId]?.click()
+    setPendingFileInputBlockId(null)
+  }, [imageUploads, pendingFileInputBlockId])
 
   const insertAtCursor = (text: string) => {
     const element = textareaRef.current
@@ -154,7 +181,7 @@ export const MessageForm = ({
     if (fallback) insertAtCursor(fallback)
   }
 
-  const handleImageUpload = async (file: File) => {
+  const handleImageUpload = async (blockId: string, file: File) => {
     if (!file.type.startsWith("image/")) {
       setImageError("Only image files are allowed.")
       return
@@ -165,9 +192,21 @@ export const MessageForm = ({
     }
     try {
       const dataUrl = await readFileAsDataUrl(file)
-      const dimensions = await readImageDimensions(dataUrl).catch(() => ({}))
-      setImageUrl(dataUrl)
-      setImageDimensions(dimensions)
+      const dimensions: { width?: number; height?: number } = await readImageDimensions(
+        dataUrl,
+      ).catch(() => ({}))
+      setImageUploads((current) =>
+        current.map((upload) =>
+          upload.blockId === blockId
+            ? {
+                ...upload,
+                url: dataUrl,
+                width: dimensions.width,
+                height: dimensions.height,
+              }
+            : upload,
+        ),
+      )
       setImageError(null)
     } catch (error) {
       console.error("Failed to read image file", error)
@@ -175,23 +214,65 @@ export const MessageForm = ({
     }
   }
 
+  const handleRemoveImageUpload = (blockId: string) => {
+    setImageUploads((current) => {
+      if (current.length <= 1) {
+        return [
+          {
+            ...current[0],
+            url: "",
+            width: undefined,
+            height: undefined,
+            isSpoiler: false,
+            exportSpoiler: false,
+          },
+        ]
+      }
+      return current.filter((upload) => upload.blockId !== blockId)
+    })
+    setImageError(null)
+  }
+
+  const handleUploadMore = () => {
+    if (imageUploads.length >= MAX_MESSAGE_IMAGES) return
+    const nextBlock = createImageUploadBlock()
+    setImageUploads((current) => [...current, nextBlock])
+    setPendingFileInputBlockId(nextBlock.blockId)
+  }
+
+  const buildSubmittedImages = (): MessageImage[] =>
+    imageUploads
+      .filter((upload) => Boolean(upload.url))
+      .slice(0, MAX_MESSAGE_IMAGES)
+      .map((upload) => ({
+        id: upload.imageId,
+        url: upload.url,
+        width: upload.width,
+        height: upload.height,
+        isSpoiler: upload.isSpoiler,
+        exportSpoiler: upload.isSpoiler ? upload.exportSpoiler : undefined,
+      }))
+
   return (
     <form
       className="space-y-3"
       onSubmit={(event) => {
         event.preventDefault()
-        if (type === "image" && !imageUrl) {
+        const submittedImages = type === "image" ? buildSubmittedImages() : []
+        const primaryImage = submittedImages[0]
+        if (type === "image" && !primaryImage) {
           setImageError("Please upload an image for this message.")
           return
         }
         onSubmit({
           senderId,
           content,
-          imageUrl: type === "image" ? imageUrl : undefined,
-          imageWidth: type === "image" && imageUrl ? imageDimensions.width : undefined,
-          imageHeight: type === "image" && imageUrl ? imageDimensions.height : undefined,
-          isSpoiler: type === "image" && imageUrl ? isSpoiler : undefined,
-          exportSpoiler: type === "image" && imageUrl && isSpoiler ? exportSpoiler : undefined,
+          images: type === "image" ? submittedImages : undefined,
+          imageUrl: primaryImage?.url,
+          imageWidth: primaryImage?.width,
+          imageHeight: primaryImage?.height,
+          isSpoiler: primaryImage?.isSpoiler,
+          exportSpoiler: primaryImage?.isSpoiler ? primaryImage.exportSpoiler : undefined,
           timestamp: fromInputValue(timestamp),
           type,
           status,
@@ -202,10 +283,7 @@ export const MessageForm = ({
           setType("text")
           setStatus("sent")
           setSenderId(resolveSenderId(defaultSenderId, participants))
-          setImageUrl("")
-          setImageDimensions({})
-          setIsSpoiler(false)
-          setExportSpoiler(false)
+          setImageUploads([createImageUploadBlock()])
           setImageError(null)
         }
       }}
@@ -238,110 +316,160 @@ export const MessageForm = ({
       {type === "image" ? (
         <div className="space-y-2">
           <Label>Image upload</Label>
-          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2">
-            <div className="min-h-20 w-28 self-stretch overflow-hidden rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))]">
-              {imageUrl ? (
-                <img src={imageUrl} alt="Uploaded preview" className="h-full w-full object-cover" />
-              ) : (
-                <div className="flex h-full items-center justify-center text-xs text-[hsl(var(--muted-foreground))]">
-                  No image
+          <div className="space-y-2">
+            {imageUploads.map((upload, index) => {
+              const spoilerSwitchId = `${imageUploadId}-spoiler-${upload.blockId}`
+              const exportSpoilerSwitchId = `${imageUploadId}-export-spoiler-${upload.blockId}`
+              const showUploadMore =
+                Boolean(upload.url) &&
+                index === imageUploads.length - 1 &&
+                imageUploads.length < MAX_MESSAGE_IMAGES
+
+              return (
+                <div key={upload.blockId} className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2">
+                    <div className="min-h-20 w-28 self-stretch overflow-hidden rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))]">
+                      {upload.url ? (
+                        <img
+                          src={upload.url}
+                          alt="Uploaded preview"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-xs text-[hsl(var(--muted-foreground))]">
+                          No image
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-1 flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRefs.current[upload.blockId]?.click()}
+                        className="gap-2"
+                      >
+                        <ImagePlus className="h-4 w-4" />
+                        Upload image
+                      </Button>
+                      {upload.url || imageUploads.length > 1 ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveImageUpload(upload.blockId)}
+                        >
+                          Remove
+                        </Button>
+                      ) : null}
+                      <span className="text-xs text-[hsl(var(--muted-foreground))]">
+                        JPG, PNG, or WEBP up to 5MB.
+                      </span>
+                      <div className="flex w-full flex-col gap-2 pt-1">
+                        <div className={cn("flex items-center gap-2", !upload.url && "opacity-60")}>
+                          <Switch
+                            id={spoilerSwitchId}
+                            checked={Boolean(upload.url && upload.isSpoiler)}
+                            onCheckedChange={(value) => {
+                              if (!upload.url) return
+                              setImageUploads((current) =>
+                                current.map((entry) =>
+                                  entry.blockId === upload.blockId
+                                    ? {
+                                        ...entry,
+                                        isSpoiler: value,
+                                        exportSpoiler: value ? entry.exportSpoiler : false,
+                                      }
+                                    : entry,
+                                ),
+                              )
+                            }}
+                            disabled={!upload.url}
+                            className={cn(!upload.url && "cursor-not-allowed")}
+                          />
+                          <Label
+                            htmlFor={spoilerSwitchId}
+                            className={cn(
+                              "flex items-center gap-1.5 text-xs font-medium text-[hsl(var(--muted-foreground))]",
+                              upload.url ? "cursor-pointer" : "cursor-not-allowed",
+                            )}
+                          >
+                            <EyeOff className="h-3.5 w-3.5" />
+                            Spoiler
+                          </Label>
+                        </div>
+                        <div
+                          className={cn(
+                            "flex items-center gap-2",
+                            (!upload.url || !upload.isSpoiler) && "opacity-60",
+                          )}
+                        >
+                          <Switch
+                            id={exportSpoilerSwitchId}
+                            checked={Boolean(upload.url && upload.isSpoiler && upload.exportSpoiler)}
+                            onCheckedChange={(value) => {
+                              if (!upload.url || !upload.isSpoiler) return
+                              setImageUploads((current) =>
+                                current.map((entry) =>
+                                  entry.blockId === upload.blockId
+                                    ? { ...entry, exportSpoiler: value }
+                                    : entry,
+                                ),
+                              )
+                            }}
+                            disabled={!upload.url || !upload.isSpoiler}
+                            className={cn((!upload.url || !upload.isSpoiler) && "cursor-not-allowed")}
+                          />
+                          <Label
+                            htmlFor={exportSpoilerSwitchId}
+                            className={cn(
+                              "flex items-center gap-1.5 text-xs font-medium text-[hsl(var(--muted-foreground))]",
+                              upload.url && upload.isSpoiler
+                                ? "cursor-pointer"
+                                : "cursor-not-allowed",
+                            )}
+                          >
+                            <EyeOff className="h-3.5 w-3.5" />
+                            Export with spoiler
+                          </Label>
+                        </div>
+                      </div>
+                    </div>
+                    <input
+                      ref={(element) => {
+                        fileInputRefs.current[upload.blockId] = element
+                      }}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (event) => {
+                        const file = event.target.files?.[0]
+                        if (!file) return
+                        await handleImageUpload(upload.blockId, file)
+                        event.target.value = ""
+                      }}
+                    />
+                  </div>
+                  {showUploadMore ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleUploadMore}
+                      className="gap-2"
+                    >
+                      <ImagePlus className="h-4 w-4" />
+                      Upload more
+                    </Button>
+                  ) : null}
                 </div>
-              )}
-            </div>
-            <div className="flex flex-1 flex-wrap items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-                className="gap-2"
-              >
-                <ImagePlus className="h-4 w-4" />
-                Upload image
-              </Button>
-              {imageUrl ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setImageUrl("")
-                    setImageDimensions({})
-                    setIsSpoiler(false)
-                    setExportSpoiler(false)
-                  }}
-                >
-                  Remove
-                </Button>
-              ) : null}
-              <span className="text-xs text-[hsl(var(--muted-foreground))]">JPG, PNG, or WEBP up to 5MB.</span>
-              <div className="flex w-full flex-col gap-2 pt-1">
-                <div className={cn("flex items-center gap-2", !imageUrl && "opacity-60")}>
-                  <Switch
-                    id={spoilerSwitchId}
-                    checked={Boolean(imageUrl && isSpoiler)}
-                    onCheckedChange={(value) => {
-                      if (!imageUrl) return
-                      setIsSpoiler(value)
-                      if (!value) {
-                        setExportSpoiler(false)
-                      }
-                    }}
-                    disabled={!imageUrl}
-                    className={cn(!imageUrl && "cursor-not-allowed")}
-                  />
-                  <Label
-                    htmlFor={spoilerSwitchId}
-                    className={cn(
-                      "flex items-center gap-1.5 text-xs font-medium text-[hsl(var(--muted-foreground))]",
-                      imageUrl ? "cursor-pointer" : "cursor-not-allowed",
-                    )}
-                  >
-                    <EyeOff className="h-3.5 w-3.5" />
-                    Spoiler
-                  </Label>
-                </div>
-                <div
-                  className={cn(
-                    "flex items-center gap-2",
-                    (!imageUrl || !isSpoiler) && "opacity-60",
-                  )}
-                >
-                  <Switch
-                    id={exportSpoilerSwitchId}
-                    checked={Boolean(imageUrl && isSpoiler && exportSpoiler)}
-                    onCheckedChange={(value) => {
-                      if (!imageUrl || !isSpoiler) return
-                      setExportSpoiler(value)
-                    }}
-                    disabled={!imageUrl || !isSpoiler}
-                    className={cn((!imageUrl || !isSpoiler) && "cursor-not-allowed")}
-                  />
-                  <Label
-                    htmlFor={exportSpoilerSwitchId}
-                    className={cn(
-                      "flex items-center gap-1.5 text-xs font-medium text-[hsl(var(--muted-foreground))]",
-                      imageUrl && isSpoiler ? "cursor-pointer" : "cursor-not-allowed",
-                    )}
-                  >
-                    <EyeOff className="h-3.5 w-3.5" />
-                    Export with spoiler
-                  </Label>
-                </div>
+              )
+            })}
+            {imageUploads.length >= MAX_MESSAGE_IMAGES && hasUploadedImages ? (
+              <div className="text-xs text-[hsl(var(--muted-foreground))]">
+                Maximum {MAX_MESSAGE_IMAGES} images per image message.
               </div>
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={async (event) => {
-                const file = event.target.files?.[0]
-                if (!file) return
-                await handleImageUpload(file)
-                event.target.value = ""
-              }}
-            />
+            ) : null}
           </div>
           {imageError ? (
             <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-200">
@@ -423,9 +551,9 @@ export const MessageForm = ({
       <div className="flex flex-wrap items-center gap-2">
         <Button
           type="submit"
-          disabled={type === "image" && !imageUrl}
+          disabled={type === "image" && !hasUploadedImages}
           onClick={() => {
-            if (type === "image" && !imageUrl) {
+            if (type === "image" && !hasUploadedImages) {
               setImageError("Please upload an image for this message.")
             }
           }}

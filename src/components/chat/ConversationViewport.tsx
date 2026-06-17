@@ -32,7 +32,7 @@ interface ConversationViewportProps {
   className?: string
   scrollClassName?: string
   fitToFrame?: boolean
-  onImageActivate?: (message: Message) => void
+  onImageActivate?: (message: Message, imageId?: string) => void
 }
 
 export const ConversationViewport = ({

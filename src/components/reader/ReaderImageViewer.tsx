@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog"
 import { Switch } from "@/components/ui/switch"
 import type { Participant } from "@/types/conversation"
-import type { Message } from "@/types/message"
+import type { Message, MessageImage } from "@/types/message"
 import { cn } from "@/utils/cn"
 
 const UI_HIDE_DELAY_MS = 2600
@@ -21,6 +21,8 @@ const MAX_CAPTION_LENGTH = 100
 const OPEN_IN_NEW_TAB_OBJECT_URL_LIFETIME_MS = 60_000
 
 export interface ReaderImageEntry {
+  id: string
+  image: MessageImage
   message: Message
   sender?: Participant
 }
@@ -80,8 +82,8 @@ const shouldUseObjectUrl = (imageUrl?: string): imageUrl is string =>
 
 const buildDownloadName = (image: ReaderImageEntry) => {
   const senderName = sanitizeFileSegment(image.sender?.name ?? "participant")
-  const extension = inferImageExtension(image.message.imageUrl ?? "")
-  return `chat-image-${senderName}-${image.message.id}.${extension}`
+  const extension = inferImageExtension(image.image.url)
+  return `chat-image-${senderName}-${image.id.replace(/[^a-z0-9-]+/gi, "-")}.${extension}`
 }
 
 const ViewerAvatar = ({
@@ -125,7 +127,7 @@ export const ReaderImageViewer = ({
   const [isUiVisible, setIsUiVisible] = useState(true)
 
   const imagesById = useMemo(
-    () => new Map(images.map((image) => [image.message.id, image])),
+    () => new Map(images.map((image) => [image.id, image])),
     [images],
   )
   const activeImage = activeImageId ? imagesById.get(activeImageId) : undefined
@@ -168,7 +170,7 @@ export const ReaderImageViewer = ({
     [enabledParticipantIdSet, images],
   )
   const currentFilteredIndex = filteredImages.findIndex(
-    (image) => image.message.id === activeImageId,
+    (image) => image.id === activeImageId,
   )
   const previewWindow = useMemo(() => {
     if (currentFilteredIndex < 0) {
@@ -234,7 +236,7 @@ export const ReaderImageViewer = ({
 
   const findNearestFilteredImage = useCallback(
     (fromImageId: string) => {
-      const originIndex = images.findIndex((image) => image.message.id === fromImageId)
+      const originIndex = images.findIndex((image) => image.id === fromImageId)
       if (originIndex === -1) return undefined
 
       for (let offset = 1; offset < images.length; offset += 1) {
@@ -292,12 +294,12 @@ export const ReaderImageViewer = ({
       return
     }
 
-    const isCurrentImageVisible = filteredImages.some((image) => image.message.id === activeImageId)
+    const isCurrentImageVisible = filteredImages.some((image) => image.id === activeImageId)
     if (isCurrentImageVisible) return
 
     const fallbackImage = findNearestFilteredImage(activeImageId)
     if (fallbackImage) {
-      onActiveImageChange(fallbackImage.message.id)
+      onActiveImageChange(fallbackImage.id)
       return
     }
 
@@ -340,7 +342,7 @@ export const ReaderImageViewer = ({
   }
 
   const handleOpenImageInNewTab = () => {
-    const imageUrl = displayImage?.message.imageUrl
+    const imageUrl = displayImage?.image.url
     if (!imageUrl) return
     revealUi()
 
@@ -378,11 +380,11 @@ export const ReaderImageViewer = ({
   }
 
   const handleDownloadImage = () => {
-    if (!displayImage?.message.imageUrl) return
+    if (!displayImage?.image.url) return
     revealUi()
 
     const link = document.createElement("a")
-    link.href = displayImage.message.imageUrl
+    link.href = displayImage.image.url
     link.download = buildDownloadName(displayImage)
     link.rel = "noopener"
     link.click()
@@ -414,14 +416,14 @@ export const ReaderImageViewer = ({
             if (event.key === "ArrowLeft" && previousImage) {
               event.preventDefault()
               revealUi()
-              onActiveImageChange(previousImage.message.id)
+              onActiveImageChange(previousImage.id)
               return
             }
 
             if (event.key === "ArrowRight" && nextImage) {
               event.preventDefault()
               revealUi()
-              onActiveImageChange(nextImage.message.id)
+              onActiveImageChange(nextImage.id)
               return
             }
 
@@ -442,7 +444,7 @@ export const ReaderImageViewer = ({
                   <div className="relative min-h-0 flex-1">
                     <div className="absolute inset-0 flex items-center justify-center px-3 py-4 sm:px-5 sm:py-5 lg:px-8 lg:py-8">
                       <img
-                        src={displayImage.message.imageUrl}
+                        src={displayImage.image.url}
                         alt={displayImage.message.content || "Chat image"}
                         className="max-h-full max-w-full rounded-2xl object-contain shadow-[0_30px_80px_rgba(0,0,0,0.45)]"
                       />
@@ -458,7 +460,7 @@ export const ReaderImageViewer = ({
                           type="button"
                           aria-label="View previous image"
                           disabled={!previousImage}
-                          onClick={() => previousImage && onActiveImageChange(previousImage.message.id)}
+                          onClick={() => previousImage && onActiveImageChange(previousImage.id)}
                           className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full border border-white/14 bg-black/40 text-white shadow-lg transition hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed disabled:opacity-35"
                         >
                           <ChevronLeft className="h-6 w-6" />
@@ -469,7 +471,7 @@ export const ReaderImageViewer = ({
                           type="button"
                           aria-label="View next image"
                           disabled={!nextImage}
-                          onClick={() => nextImage && onActiveImageChange(nextImage.message.id)}
+                          onClick={() => nextImage && onActiveImageChange(nextImage.id)}
                           className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full border border-white/14 bg-black/40 text-white shadow-lg transition hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed disabled:opacity-35"
                         >
                           <ChevronRight className="h-6 w-6" />
@@ -498,12 +500,12 @@ export const ReaderImageViewer = ({
                         </span>
                         {previewWindow.images.map(({ image, isCurrent }) => (
                           <button
-                            key={image.message.id}
+                            key={image.id}
                             type="button"
                             aria-label={isCurrent ? "Current image preview" : "Open image preview"}
                             onClick={() => {
                               revealUi()
-                              onActiveImageChange(image.message.id)
+                              onActiveImageChange(image.id)
                             }}
                             className={cn(
                               "group relative overflow-hidden rounded-2xl border bg-white/5 shadow-lg transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70",
@@ -513,7 +515,7 @@ export const ReaderImageViewer = ({
                             )}
                           >
                             <img
-                              src={image.message.imageUrl}
+                              src={image.image.url}
                               alt={image.message.content || "Image preview"}
                               className="h-full w-full object-cover"
                             />
