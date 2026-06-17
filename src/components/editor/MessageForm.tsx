@@ -1,4 +1,20 @@
-import { useEffect, useId, useRef, useState } from "react"
+import { useEffect, useId, useRef, useState, type MutableRefObject } from "react"
+import {
+  DndContext,
+  PointerSensor,
+  TouchSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core"
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable"
+import { CSS, type Transform } from "@dnd-kit/utilities"
 import type { Message, MessageImage } from "@/types/message"
 import type { Participant } from "@/types/conversation"
 import { Button } from "@/components/ui/button"
@@ -10,7 +26,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/utils/cn"
 import { generateId, readFileAsDataUrl } from "@/utils/helpers"
 import { getMessageImages, MAX_MESSAGE_IMAGES } from "@/utils/messageImages"
-import { Clipboard, EyeOff, ImagePlus, X } from "lucide-react"
+import { Clipboard, EyeOff, GripVertical, ImagePlus, X } from "lucide-react"
 
 interface MessageFormProps {
   participants: Participant[]
@@ -45,6 +61,19 @@ interface ImageUploadBlock {
   height?: number
   isSpoiler: boolean
   exportSpoiler: boolean
+}
+
+interface SortableImageUploadItemProps {
+  upload: ImageUploadBlock
+  index: number
+  uploadCount: number
+  imageUploadId: string
+  fileInputRefs: MutableRefObject<Record<string, HTMLInputElement | null>>
+  onImageUpload: (blockId: string, file: File) => Promise<void>
+  onRemove: (blockId: string) => void
+  onUploadMore: () => void
+  onSpoilerChange: (blockId: string, value: boolean) => void
+  onExportSpoilerChange: (blockId: string, value: boolean) => void
 }
 
 const resolveSenderId = (preferredId: string | undefined, participants: Participant[]) => {
@@ -94,6 +123,175 @@ const buildInitialImageUploads = (initial?: Message | null): ImageUploadBlock[] 
   return images.slice(0, MAX_MESSAGE_IMAGES).map(createImageUploadBlock)
 }
 
+const restrictToVerticalAxis = ({ transform }: { transform: Transform }) => ({
+  ...transform,
+  x: 0,
+})
+
+const SortableImageUploadItem = ({
+  upload,
+  index,
+  uploadCount,
+  imageUploadId,
+  fileInputRefs,
+  onImageUpload,
+  onRemove,
+  onUploadMore,
+  onSpoilerChange,
+  onExportSpoilerChange,
+}: SortableImageUploadItemProps) => {
+  const canReorder = uploadCount > 1
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({
+    id: upload.blockId,
+    disabled: !canReorder,
+    animateLayoutChanges: () => false,
+  })
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition: "none",
+  }
+  const spoilerSwitchId = `${imageUploadId}-spoiler-${upload.blockId}`
+  const exportSpoilerSwitchId = `${imageUploadId}-export-spoiler-${upload.blockId}`
+  const showUploadMore =
+    Boolean(upload.url) && index === uploadCount - 1 && uploadCount < MAX_MESSAGE_IMAGES
+
+  return (
+    <div ref={setNodeRef} style={style} className="space-y-2">
+      <div
+        className={cn(
+          "relative flex flex-wrap items-stretch gap-3 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] py-2 pl-[3.25rem] pr-3",
+          isDragging && "ring-2 ring-cyan-400/25",
+        )}
+      >
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className={cn(
+            "absolute inset-y-0 left-0 h-full w-10 cursor-grab rounded-l-xl rounded-r-none border-r border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] active:cursor-grabbing",
+            !canReorder && "cursor-not-allowed opacity-40",
+          )}
+          disabled={!canReorder}
+          aria-label="Reorder image upload"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="h-4 w-4" />
+        </Button>
+        <div className="min-h-20 w-28 self-stretch overflow-hidden rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))]">
+          {upload.url ? (
+            <img
+              src={upload.url}
+              alt="Uploaded preview"
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center text-xs text-[hsl(var(--muted-foreground))]">
+              No image
+            </div>
+          )}
+        </div>
+        <div className="flex flex-1 flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRefs.current[upload.blockId]?.click()}
+            className="gap-2"
+          >
+            <ImagePlus className="h-4 w-4" />
+            Upload image
+          </Button>
+          {upload.url || uploadCount > 1 ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => onRemove(upload.blockId)}
+            >
+              Remove
+            </Button>
+          ) : null}
+          <span className="text-xs text-[hsl(var(--muted-foreground))]">
+            JPG, PNG, or WEBP up to 5MB.
+          </span>
+          <div className="flex w-full flex-col gap-2 pt-1">
+            <div className={cn("flex items-center gap-2", !upload.url && "opacity-60")}>
+              <Switch
+                id={spoilerSwitchId}
+                checked={Boolean(upload.url && upload.isSpoiler)}
+                onCheckedChange={(value) => onSpoilerChange(upload.blockId, value)}
+                disabled={!upload.url}
+                className={cn(!upload.url && "cursor-not-allowed")}
+              />
+              <Label
+                htmlFor={spoilerSwitchId}
+                className={cn(
+                  "flex items-center gap-1.5 text-xs font-medium text-[hsl(var(--muted-foreground))]",
+                  upload.url ? "cursor-pointer" : "cursor-not-allowed",
+                )}
+              >
+                <EyeOff className="h-3.5 w-3.5" />
+                Spoiler
+              </Label>
+            </div>
+            <div
+              className={cn(
+                "flex items-center gap-2",
+                (!upload.url || !upload.isSpoiler) && "opacity-60",
+              )}
+            >
+              <Switch
+                id={exportSpoilerSwitchId}
+                checked={Boolean(upload.url && upload.isSpoiler && upload.exportSpoiler)}
+                onCheckedChange={(value) => onExportSpoilerChange(upload.blockId, value)}
+                disabled={!upload.url || !upload.isSpoiler}
+                className={cn((!upload.url || !upload.isSpoiler) && "cursor-not-allowed")}
+              />
+              <Label
+                htmlFor={exportSpoilerSwitchId}
+                className={cn(
+                  "flex items-center gap-1.5 text-xs font-medium text-[hsl(var(--muted-foreground))]",
+                  upload.url && upload.isSpoiler ? "cursor-pointer" : "cursor-not-allowed",
+                )}
+              >
+                <EyeOff className="h-3.5 w-3.5" />
+                Export spoiler
+              </Label>
+            </div>
+          </div>
+        </div>
+        <input
+          ref={(element) => {
+            fileInputRefs.current[upload.blockId] = element
+          }}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={async (event) => {
+            const file = event.target.files?.[0]
+            if (!file) return
+            await onImageUpload(upload.blockId, file)
+            event.target.value = ""
+          }}
+        />
+      </div>
+      {showUploadMore ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={onUploadMore}
+          className="gap-2"
+        >
+          <ImagePlus className="h-4 w-4" />
+          Upload more
+        </Button>
+      ) : null}
+    </div>
+  )
+}
+
 export const MessageForm = ({
   participants,
   initial,
@@ -128,6 +326,10 @@ export const MessageForm = ({
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
   const uploadedImages = imageUploads.filter((upload) => Boolean(upload.url))
   const hasUploadedImages = uploadedImages.length > 0
+  const imageUploadSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
+  )
 
   useEffect(() => {
     if (initial) return
@@ -240,6 +442,40 @@ export const MessageForm = ({
     setPendingFileInputBlockId(nextBlock.blockId)
   }
 
+  const handleImageUploadDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return
+
+    setImageUploads((current) => {
+      const oldIndex = current.findIndex((upload) => upload.blockId === active.id)
+      const newIndex = current.findIndex((upload) => upload.blockId === over.id)
+      if (oldIndex === -1 || newIndex === -1) return current
+      return arrayMove(current, oldIndex, newIndex)
+    })
+  }
+
+  const handleSpoilerChange = (blockId: string, value: boolean) => {
+    setImageUploads((current) =>
+      current.map((entry) => {
+        if (entry.blockId !== blockId || !entry.url) return entry
+        return {
+          ...entry,
+          isSpoiler: value,
+          exportSpoiler: value ? entry.exportSpoiler : false,
+        }
+      }),
+    )
+  }
+
+  const handleExportSpoilerChange = (blockId: string, value: boolean) => {
+    setImageUploads((current) =>
+      current.map((entry) =>
+        entry.blockId === blockId && entry.url && entry.isSpoiler
+          ? { ...entry, exportSpoiler: value }
+          : entry,
+      ),
+    )
+  }
+
   const buildSubmittedImages = (): MessageImage[] =>
     imageUploads
       .filter((upload) => Boolean(upload.url))
@@ -317,154 +553,35 @@ export const MessageForm = ({
         <div className="space-y-2">
           <Label>Image upload</Label>
           <div className="space-y-2">
-            {imageUploads.map((upload, index) => {
-              const spoilerSwitchId = `${imageUploadId}-spoiler-${upload.blockId}`
-              const exportSpoilerSwitchId = `${imageUploadId}-export-spoiler-${upload.blockId}`
-              const showUploadMore =
-                Boolean(upload.url) &&
-                index === imageUploads.length - 1 &&
-                imageUploads.length < MAX_MESSAGE_IMAGES
-
-              return (
-                <div key={upload.blockId} className="space-y-2">
-                  <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2">
-                    <div className="min-h-20 w-28 self-stretch overflow-hidden rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))]">
-                      {upload.url ? (
-                        <img
-                          src={upload.url}
-                          alt="Uploaded preview"
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-full items-center justify-center text-xs text-[hsl(var(--muted-foreground))]">
-                          No image
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex flex-1 flex-wrap items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => fileInputRefs.current[upload.blockId]?.click()}
-                        className="gap-2"
-                      >
-                        <ImagePlus className="h-4 w-4" />
-                        Upload image
-                      </Button>
-                      {upload.url || imageUploads.length > 1 ? (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveImageUpload(upload.blockId)}
-                        >
-                          Remove
-                        </Button>
-                      ) : null}
-                      <span className="text-xs text-[hsl(var(--muted-foreground))]">
-                        JPG, PNG, or WEBP up to 5MB.
-                      </span>
-                      <div className="flex w-full flex-col gap-2 pt-1">
-                        <div className={cn("flex items-center gap-2", !upload.url && "opacity-60")}>
-                          <Switch
-                            id={spoilerSwitchId}
-                            checked={Boolean(upload.url && upload.isSpoiler)}
-                            onCheckedChange={(value) => {
-                              if (!upload.url) return
-                              setImageUploads((current) =>
-                                current.map((entry) =>
-                                  entry.blockId === upload.blockId
-                                    ? {
-                                        ...entry,
-                                        isSpoiler: value,
-                                        exportSpoiler: value ? entry.exportSpoiler : false,
-                                      }
-                                    : entry,
-                                ),
-                              )
-                            }}
-                            disabled={!upload.url}
-                            className={cn(!upload.url && "cursor-not-allowed")}
-                          />
-                          <Label
-                            htmlFor={spoilerSwitchId}
-                            className={cn(
-                              "flex items-center gap-1.5 text-xs font-medium text-[hsl(var(--muted-foreground))]",
-                              upload.url ? "cursor-pointer" : "cursor-not-allowed",
-                            )}
-                          >
-                            <EyeOff className="h-3.5 w-3.5" />
-                            Spoiler
-                          </Label>
-                        </div>
-                        <div
-                          className={cn(
-                            "flex items-center gap-2",
-                            (!upload.url || !upload.isSpoiler) && "opacity-60",
-                          )}
-                        >
-                          <Switch
-                            id={exportSpoilerSwitchId}
-                            checked={Boolean(upload.url && upload.isSpoiler && upload.exportSpoiler)}
-                            onCheckedChange={(value) => {
-                              if (!upload.url || !upload.isSpoiler) return
-                              setImageUploads((current) =>
-                                current.map((entry) =>
-                                  entry.blockId === upload.blockId
-                                    ? { ...entry, exportSpoiler: value }
-                                    : entry,
-                                ),
-                              )
-                            }}
-                            disabled={!upload.url || !upload.isSpoiler}
-                            className={cn((!upload.url || !upload.isSpoiler) && "cursor-not-allowed")}
-                          />
-                          <Label
-                            htmlFor={exportSpoilerSwitchId}
-                            className={cn(
-                              "flex items-center gap-1.5 text-xs font-medium text-[hsl(var(--muted-foreground))]",
-                              upload.url && upload.isSpoiler
-                                ? "cursor-pointer"
-                                : "cursor-not-allowed",
-                            )}
-                          >
-                            <EyeOff className="h-3.5 w-3.5" />
-                            Export with spoiler
-                          </Label>
-                        </div>
-                      </div>
-                    </div>
-                    <input
-                      ref={(element) => {
-                        fileInputRefs.current[upload.blockId] = element
-                      }}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={async (event) => {
-                        const file = event.target.files?.[0]
-                        if (!file) return
-                        await handleImageUpload(upload.blockId, file)
-                        event.target.value = ""
-                      }}
+            <DndContext
+              sensors={imageUploadSensors}
+              collisionDetection={closestCenter}
+              modifiers={[restrictToVerticalAxis]}
+              onDragEnd={handleImageUploadDragEnd}
+            >
+              <SortableContext
+                items={imageUploads.map((upload) => upload.blockId)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-2">
+                  {imageUploads.map((upload, index) => (
+                    <SortableImageUploadItem
+                      key={upload.blockId}
+                      upload={upload}
+                      index={index}
+                      uploadCount={imageUploads.length}
+                      imageUploadId={imageUploadId}
+                      fileInputRefs={fileInputRefs}
+                      onImageUpload={handleImageUpload}
+                      onRemove={handleRemoveImageUpload}
+                      onUploadMore={handleUploadMore}
+                      onSpoilerChange={handleSpoilerChange}
+                      onExportSpoilerChange={handleExportSpoilerChange}
                     />
-                  </div>
-                  {showUploadMore ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleUploadMore}
-                      className="gap-2"
-                    >
-                      <ImagePlus className="h-4 w-4" />
-                      Upload more
-                    </Button>
-                  ) : null}
+                  ))}
                 </div>
-              )
-            })}
+              </SortableContext>
+            </DndContext>
             {imageUploads.length >= MAX_MESSAGE_IMAGES && hasUploadedImages ? (
               <div className="text-xs text-[hsl(var(--muted-foreground))]">
                 Maximum {MAX_MESSAGE_IMAGES} images per image message.
