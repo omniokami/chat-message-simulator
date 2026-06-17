@@ -48,7 +48,6 @@ export const Toolbar = () => {
   const conversation = useConversationStore((state) => state.conversation)
   const layoutId = useConversationStore((state) => state.layoutId)
   const themeId = useConversationStore((state) => state.themeId)
-  const editorTheme = useConversationStore((state) => state.editorTheme)
   const backgroundImageUrl = useConversationStore((state) => state.backgroundImageUrl)
   const backgroundImageOpacity = useConversationStore((state) => state.backgroundImageOpacity)
   const backgroundColor = useConversationStore((state) => state.backgroundColor)
@@ -207,7 +206,6 @@ export const Toolbar = () => {
                             conversation,
                             layoutId,
                             themeId,
-                            editorTheme,
                             backgroundImageUrl,
                             backgroundImageOpacity,
                             backgroundColor,

@@ -27,7 +27,8 @@ export interface ConversationWithAppearance {
   conversation: Conversation
   layoutId: LayoutId
   themeId: ThemeId
-  editorTheme: EditorTheme
+  // Legacy JSON files may include the workspace theme, but imports should ignore it.
+  editorTheme?: EditorTheme
   backgroundImageUrl: string
   backgroundImageOpacity: number
   backgroundColor: string
@@ -652,7 +653,6 @@ export const useConversationStore = create<ConversationStore>()(
           activeParticipantId: participants[0]?.id ?? "",
           layoutId: appearance?.layoutId ?? state.layoutId,
           themeId: appearance?.themeId ?? state.themeId,
-          editorTheme: appearance?.editorTheme ?? state.editorTheme,
           backgroundImageUrl: appearance?.backgroundImageUrl ?? state.backgroundImageUrl,
           backgroundImageOpacity: appearance?.backgroundImageOpacity ?? state.backgroundImageOpacity,
           backgroundColor: appearance?.backgroundColor ?? state.backgroundColor,
