@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { Check, CheckCheck, EyeOff } from "lucide-react"
+import { Check, CheckCheck, Expand, EyeOff } from "lucide-react"
 import type { Message } from "@/types/message"
 import type { Participant } from "@/types/conversation"
 import type { LayoutConfig } from "@/types/layout"
@@ -369,7 +369,7 @@ export const MessageBubble = ({
           {message.imageUrl ? (
             <div
               className={cn(
-                "relative w-fit max-w-[240px] overflow-hidden border border-white/20",
+                "group relative w-fit max-w-[240px] overflow-hidden border border-white/20",
                 (isSpoilerCovered || canActivateImage) && "cursor-pointer",
                 imageRadius,
               )}
@@ -484,6 +484,14 @@ export const MessageBubble = ({
                 >
                   <EyeOff className="h-4 w-4" />
                 </button>
+              ) : null}
+              {canActivateImage ? (
+                <div
+                  aria-hidden="true"
+                  className="absolute bottom-2 right-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/45 text-white/80 shadow-sm transition-all duration-200 ease-out opacity-0 scale-95 hover:bg-black/60 group-hover:opacity-100 group-hover:scale-100 group-focus-visible:opacity-100 group-focus-visible:scale-100"
+                >
+                  <Expand className="h-4 w-4" />
+                </div>
               ) : null}
             </div>
           ) : (

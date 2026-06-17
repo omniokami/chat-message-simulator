@@ -327,7 +327,6 @@ export const ReaderImageViewer = ({
       enabledParticipantIds.includes(participantId) &&
       enabledParticipantIds.length === 1
     ) {
-      onClose()
       return
     }
 
@@ -604,6 +603,10 @@ export const ReaderImageViewer = ({
                           </div>
                           <Switch
                             checked={enabledParticipantIdSet.has(participantId)}
+                            disabled={
+                              enabledParticipantIds.length === 1 &&
+                              enabledParticipantIdSet.has(participantId)
+                            }
                             onCheckedChange={(checked) =>
                               handleParticipantToggle(participantId, checked)
                             }
