@@ -42,7 +42,7 @@ export interface ConversationViewportState {
   screenScrollTops: number[]
   screenCount: number
   getViewportOffset: () => { x: number; y: number }
-  scrollConversation: (position: "top" | "bottom") => void
+  scrollConversation: (position: "top" | "bottom", behavior?: ScrollBehavior) => void
 }
 
 const defaultMetrics: ConversationViewportMetrics = {
@@ -253,12 +253,15 @@ export const useConversationViewport = ({
     }
   }, [appliedScale, height, width])
 
-  const scrollConversation = useCallback((position: "top" | "bottom") => {
+  const scrollConversation = useCallback((
+    position: "top" | "bottom",
+    behavior: ScrollBehavior = "smooth",
+  ) => {
     const container = conversationContainerElementRef.current
     if (!container) return
     container.scrollTo({
       top: position === "top" ? 0 : container.scrollHeight,
-      behavior: "smooth",
+      behavior,
     })
   }, [])
 

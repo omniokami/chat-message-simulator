@@ -164,6 +164,7 @@ interface ConversationViewportControlsProps {
   onResetZoom: () => void
   onJump: (position: "top" | "bottom") => void
   modeActions?: ReactNode
+  chromeActions?: ReactNode
   className?: string
 }
 
@@ -176,6 +177,7 @@ export const ConversationViewportControls = ({
   onResetZoom,
   onJump,
   modeActions,
+  chromeActions,
   className,
 }: ConversationViewportControlsProps) => (
   <div
@@ -210,12 +212,6 @@ export const ConversationViewportControls = ({
       </Button>
     </div>
     <div className="flex shrink-0 items-center gap-2">
-      <Button variant="outline" size="sm" onClick={onToggleChrome}>
-        {showChrome ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-        <span className="hidden min-w-[5.8rem] text-left sm:inline">
-          {showChrome ? "Hide chrome" : "Show chrome"}
-        </span>
-      </Button>
       <Button
         variant="outline"
         size="sm"
@@ -239,6 +235,15 @@ export const ConversationViewportControls = ({
       >
         <ArrowDownToLine className="h-4 w-4" />
         <span className="hidden sm:inline">To bottom</span>
+      </Button>
+    </div>
+    <div className="flex shrink-0 items-center gap-2">
+      {chromeActions}
+      <Button variant="outline" size="sm" onClick={onToggleChrome}>
+        {showChrome ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+        <span className="hidden min-w-[5.8rem] text-left sm:inline">
+          {showChrome ? "Hide chrome" : "Show chrome"}
+        </span>
       </Button>
     </div>
   </div>
