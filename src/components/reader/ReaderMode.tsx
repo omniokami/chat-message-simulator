@@ -7,6 +7,7 @@ import {
   ConversationViewportStatus,
 } from "@/components/chat/ConversationViewport"
 import { ReaderImageViewer } from "@/components/reader/ReaderImageViewer"
+import { useConversationImageViewer } from "@/hooks/useConversationImageViewer"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -16,7 +17,6 @@ import {
 } from "@/components/ui/dialog"
 import { useConversationViewport } from "@/hooks/useConversationViewport"
 import { useConversationStore } from "@/store/conversationStore"
-import type { Message } from "@/types/message"
 import { readJsonFile } from "@/utils/storage"
 
 interface ReaderModeProps {
@@ -35,8 +35,6 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
   const [loadError, setLoadError] = useState<string | null>(null)
   const [readerZoom, setReaderZoom] = useState(READER_DEFAULT_ZOOM)
   const [isViewportMounted, setIsViewportMounted] = useState(false)
-  const [activeImageId, setActiveImageId] = useState<string | null>(null)
-  const [enabledImageParticipantIds, setEnabledImageParticipantIds] = useState<string[]>([])
   const conversation = useConversationStore((state) => state.conversation)
   const layoutId = useConversationStore((state) => state.layoutId)
   const themeId = useConversationStore((state) => state.themeId)
@@ -53,8 +51,6 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
   useEffect(() => {
     if (!open) {
       setIsViewportMounted(false)
-      setActiveImageId(null)
-      setEnabledImageParticipantIds([])
       wasOpenRef.current = false
       return
     }
@@ -108,22 +104,6 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
     () => layout.themes.find((item) => item.id === themeId) ?? layout.themes[0],
     [layout, themeId],
   )
-  const readerImages = useMemo(
-    () =>
-      conversation.messages
-        .filter(
-          (message) => !message.isHidden && message.type === "image" && Boolean(message.imageUrl),
-        )
-        .map((message) => ({
-          message,
-          sender: conversation.participants.find((participant) => participant.id === message.senderId),
-        })),
-    [conversation.messages, conversation.participants],
-  )
-  const readerImageParticipantIds = useMemo(
-    () => Array.from(new Set(readerImages.map((image) => image.message.senderId))),
-    [readerImages],
-  )
   const visibleMessageCount = conversation.messages.filter((message) => !message.isHidden).length
   const measurementKey = [
     conversation.id,
@@ -147,58 +127,25 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
     maxAppliedScale: READER_MAX_SCALE,
     measurementKey,
   })
+  const imageViewer = useConversationImageViewer({
+    conversation,
+    exportElementRef: readerViewport.exportElementRef,
+  })
+  const closeImageViewer = imageViewer.closeImageViewer
   const shouldShowJumpControls = hasLongConversation ?? readerViewport.hasLongConversation
   const isOpening = open && !wasOpenRef.current
   const shouldRenderViewport = open && isViewportMounted && !isOpening
-
-  useEffect(() => {
-    if (!activeImageId) return
-
-    const hasActiveImage = readerImages.some((image) => image.message.id === activeImageId)
-    if (!hasActiveImage) {
-      setActiveImageId(null)
-      setEnabledImageParticipantIds([])
-    }
-  }, [activeImageId, readerImages])
-
-  const openImageViewer = (message: Message) => {
-    if (message.type !== "image" || !message.imageUrl) return
-    setEnabledImageParticipantIds(readerImageParticipantIds)
-    setActiveImageId(message.id)
-  }
-
-  const closeImageViewer = () => {
-    setActiveImageId(null)
-    setEnabledImageParticipantIds([])
-  }
-
-  const scrollToMessage = (messageId: string) => {
-    closeImageViewer()
-
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => {
-        const root = readerViewport.exportElementRef.current
-        if (!root) return
-
-        const escapedMessageId =
-          typeof window.CSS?.escape === "function"
-            ? window.CSS.escape(messageId)
-            : messageId.replace(/["\\]/g, "\\$&")
-        const target = root.querySelector<HTMLElement>(`[data-message-id="${escapedMessageId}"]`)
-
-        target?.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-          inline: "nearest",
-        })
-      })
-    })
-  }
 
   const enterEditMode = () => {
     setUi({ activeView: "editor", isSidebarOpen: true })
     onOpenChange(false)
   }
+
+  useEffect(() => {
+    if (!open) {
+      closeImageViewer()
+    }
+  }, [closeImageViewer, open])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -271,22 +218,22 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
                 className="h-full rounded-none border-0 bg-[hsl(var(--background))] p-0"
                 scrollClassName="overflow-hidden"
                 fitToFrame
-                onImageActivate={openImageViewer}
+                onImageActivate={imageViewer.openImageViewer}
               />
             ) : (
               <div className="h-full bg-[hsl(var(--background))]" aria-hidden="true" />
             )}
           </main>
           <ReaderImageViewer
-            open={Boolean(activeImageId)}
-            activeImageId={activeImageId}
-            images={readerImages}
+            open={Boolean(imageViewer.activeImageId)}
+            activeImageId={imageViewer.activeImageId}
+            images={imageViewer.images}
             participants={conversation.participants}
-            enabledParticipantIds={enabledImageParticipantIds}
-            onEnabledParticipantIdsChange={setEnabledImageParticipantIds}
-            onActiveImageChange={setActiveImageId}
-            onClose={closeImageViewer}
-            onGoToMessage={scrollToMessage}
+            enabledParticipantIds={imageViewer.enabledParticipantIds}
+            onEnabledParticipantIdsChange={imageViewer.setEnabledParticipantIds}
+            onActiveImageChange={imageViewer.setActiveImageId}
+            onClose={imageViewer.closeImageViewer}
+            onGoToMessage={imageViewer.scrollToMessage}
           />
           <input
             ref={fileInputRef}

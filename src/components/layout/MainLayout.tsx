@@ -24,6 +24,8 @@ import {
   ConversationViewportStatus,
 } from "@/components/chat/ConversationViewport"
 import { ReaderMode } from "@/components/reader/ReaderMode"
+import { ReaderImageViewer } from "@/components/reader/ReaderImageViewer"
+import { useConversationImageViewer } from "@/hooks/useConversationImageViewer"
 import { useConversationViewport } from "@/hooks/useConversationViewport"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
@@ -158,6 +160,10 @@ export const MainLayout = () => {
     zoom: ui.zoom,
     autoFit: ui.autoFit,
     measurementKey: previewMeasurementKey,
+  })
+  const previewImageViewer = useConversationImageViewer({
+    conversation,
+    exportElementRef: previewViewport.exportElementRef,
   })
   const conversationMetrics = previewViewport.metrics
 
@@ -386,6 +392,18 @@ export const MainLayout = () => {
                   backgroundColor={backgroundColor}
                   spoilerBlur={spoilerBlur}
                   className="h-[60vh] lg:h-[70vh]"
+                  onImageActivate={previewImageViewer.openImageViewer}
+                />
+                <ReaderImageViewer
+                  open={Boolean(previewImageViewer.activeImageId)}
+                  activeImageId={previewImageViewer.activeImageId}
+                  images={previewImageViewer.images}
+                  participants={conversation.participants}
+                  enabledParticipantIds={previewImageViewer.enabledParticipantIds}
+                  onEnabledParticipantIdsChange={previewImageViewer.setEnabledParticipantIds}
+                  onActiveImageChange={previewImageViewer.setActiveImageId}
+                  onClose={previewImageViewer.closeImageViewer}
+                  onGoToMessage={previewImageViewer.scrollToMessage}
                 />
                 <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="space-y-2">

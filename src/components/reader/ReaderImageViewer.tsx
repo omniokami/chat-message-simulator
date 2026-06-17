@@ -266,6 +266,32 @@ export const ReaderImageViewer = ({
   }, [activeImage, clearHideUiTimeout, onClose, open])
 
   useEffect(() => {
+    if (!open || typeof document === "undefined") return
+
+    document.documentElement.dataset.imageViewerOpen = "open"
+    document.body.dataset.imageViewerOpen = "open"
+
+    const bodyOverflow = document.body.style.overflow
+    const htmlOverflow = document.documentElement.style.overflow
+    const bodyOverscrollBehavior = document.body.style.overscrollBehavior
+    const htmlOverscrollBehavior = document.documentElement.style.overscrollBehavior
+
+    document.body.style.overflow = "hidden"
+    document.documentElement.style.overflow = "hidden"
+    document.body.style.overscrollBehavior = "none"
+    document.documentElement.style.overscrollBehavior = "none"
+
+    return () => {
+      delete document.documentElement.dataset.imageViewerOpen
+      delete document.body.dataset.imageViewerOpen
+      document.body.style.overflow = bodyOverflow
+      document.documentElement.style.overflow = htmlOverflow
+      document.body.style.overscrollBehavior = bodyOverscrollBehavior
+      document.documentElement.style.overscrollBehavior = htmlOverscrollBehavior
+    }
+  }, [open])
+
+  useEffect(() => {
     if (!open) return
 
     const handleWindowBlur = () => scheduleUiHide()
