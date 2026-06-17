@@ -112,6 +112,7 @@ interface MessageImageTileProps {
   imageClassName?: string
   imageWidth?: number
   imageHeight?: number
+  compactSpoilerBadge?: boolean
   spoilerBlur: number
   isSpoilerRevealed: boolean
   onSpoilerRevealChange: (imageKey: string, isRevealed: boolean) => void
@@ -128,6 +129,7 @@ const MessageImageTile = ({
   imageClassName,
   imageWidth,
   imageHeight,
+  compactSpoilerBadge,
   spoilerBlur,
   isSpoilerRevealed,
   onSpoilerRevealChange,
@@ -278,12 +280,23 @@ const MessageImageTile = ({
         >
           <span
             className={cn(
-              "flex flex-col items-center gap-1 rounded-full bg-black/35 px-4 py-3 transition-all duration-200 ease-out",
+              "flex max-h-[calc(100%-0.5rem)] max-w-[calc(100%-0.5rem)] flex-col items-center justify-center overflow-hidden rounded-full bg-black/35 transition-all duration-200 ease-out",
+              compactSpoilerBadge ? "gap-0.5 px-2 py-1.5" : "gap-1 px-3 py-2.5",
               isSpoilerCovered ? "scale-100 opacity-100" : "scale-95 opacity-0",
             )}
           >
-            <EyeOff className="h-7 w-7 opacity-80" />
-            <span className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] opacity-80">
+            <EyeOff
+              className={cn(compactSpoilerBadge ? "h-4 w-4" : "h-6 w-6", "opacity-75")}
+              strokeWidth={1.55}
+            />
+            <span
+              className={cn(
+                "max-w-full truncate uppercase opacity-75",
+                compactSpoilerBadge
+                  ? "text-[0.48rem] font-medium tracking-[0.08em]"
+                  : "text-[0.58rem] font-medium tracking-[0.14em]",
+              )}
+            >
               spoiler
             </span>
           </span>
@@ -585,6 +598,7 @@ export const MessageBubble = ({
                         getMultiImageTileClass(index, messageImages.length),
                       )}
                       imageClassName="h-full w-full object-cover"
+                      compactSpoilerBadge
                       spoilerBlur={resolvedSpoilerBlur}
                       isSpoilerRevealed={revealedImageKeys.includes(imageKey)}
                       onSpoilerRevealChange={setImageSpoilerRevealed}
