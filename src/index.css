@@ -68,12 +68,6 @@
     padding-right: 0 !important;
   }
 
-  html[data-image-viewer-open="open"] {
-    scrollbar-gutter: auto !important;
-    margin-right: 0 !important;
-    padding-right: 0 !important;
-  }
-
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
@@ -89,7 +83,8 @@
     padding-right: 0 !important;
   }
 
-  body[data-image-viewer-open="open"] {
+  body[data-scroll-locked]:not([data-reader-mode="open"]) {
+    overflow-y: scroll !important;
     margin-right: 0 !important;
     padding-right: 0 !important;
   }
