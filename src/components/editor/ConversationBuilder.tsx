@@ -24,10 +24,14 @@ import {
   Eye,
   EyeOff,
   GripVertical,
+  Image as ImageIcon,
+  Info,
+  MessageSquareText,
   MoreHorizontal,
   Pencil,
   Trash2,
 } from "lucide-react"
+import type { Participant } from "@/types/conversation"
 import type { Message } from "@/types/message"
 import { useConversationStore } from "@/store/conversationStore"
 import { MessageForm } from "@/components/editor/MessageForm"
@@ -59,18 +63,45 @@ const DirectionalCopyIcon = ({ direction }: { direction: "up" | "down" }) => (
   </span>
 )
 
+const MessageTypeBadge = ({ type }: { type: Message["type"] }) => {
+  const Icon = type === "image" ? ImageIcon : type === "system" ? Info : MessageSquareText
+  const label = type === "image" ? "Image message" : type === "system" ? "System message" : "Text message"
+
+  return (
+    <span
+      className={cn(
+        "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border",
+        type === "image" &&
+          "border-sky-400/35 bg-sky-400/10 text-sky-500 dark:text-sky-300",
+        type === "system" &&
+          "border-violet-400/35 bg-violet-400/10 text-violet-500 dark:text-violet-300",
+        type === "text" &&
+          "border-[hsl(var(--border))] bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]",
+      )}
+      title={label}
+      aria-label={label}
+    >
+      <Icon className="h-4 w-4" />
+    </span>
+  )
+}
+
 const MessageRow = ({
   message,
+  sender,
   onEdit,
   onDelete,
+  isHighlighted,
   isActionsOpen,
   onToggleActions,
 }: {
   message: Message
+  sender: Participant | undefined
   onEdit: () => void
   onDuplicate: () => void
   onDelete: () => void
   onToggleVisibility: () => void
+  isHighlighted: boolean
   isActionsOpen: boolean
   onToggleActions: () => void
 }) => {
@@ -80,6 +111,7 @@ const MessageRow = ({
   })
 
   const isHidden = Boolean(message.isHidden)
+  const avatarFallback = (sender?.name || "??").slice(0, 2).toUpperCase()
   const style = {
     transform: CSS.Transform.toString(transform),
     transition: "none",
@@ -90,20 +122,39 @@ const MessageRow = ({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "flex items-center gap-3 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 shadow-sm hover:bg-[hsl(var(--accent))]",
+        "relative flex items-center gap-3 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 shadow-sm hover:bg-[hsl(var(--accent))] sm:pl-11",
         isHidden && "bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]",
+        isHighlighted &&
+          "border-amber-400/70 bg-amber-300/15 shadow-[0_0_0_1px_rgba(251,191,36,0.22)] hover:bg-amber-300/20",
         isDragging && "ring-2 ring-cyan-400/25",
       )}
     >
       <Button
         variant="ghost"
         size="icon"
-        className="hidden cursor-grab sm:inline-flex"
+        className="absolute inset-y-0 left-0 hidden h-full w-8 cursor-grab rounded-l-xl rounded-r-none border-r border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] active:cursor-grabbing sm:inline-flex"
         {...attributes}
         {...listeners}
       >
         <GripVertical className="h-4 w-4" />
       </Button>
+      {sender?.avatarUrl ? (
+        <img
+          src={sender.avatarUrl}
+          alt={sender.name || "Sender avatar"}
+          className="h-8 w-8 shrink-0 rounded-full border border-[hsl(var(--border))] object-cover"
+          loading="lazy"
+          decoding="async"
+        />
+      ) : (
+        <div
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--muted))] text-[0.65rem] font-semibold text-[hsl(var(--muted-foreground))]"
+          title={sender?.name ?? "Unknown sender"}
+        >
+          {avatarFallback}
+        </div>
+      )}
+      <MessageTypeBadge type={message.type} />
       <div className="min-w-0 flex-1">
         <div
           className={cn(
@@ -173,6 +224,7 @@ export const ConversationBuilder = () => {
   const [viewMode, setViewMode] = useState<"standard" | "easy">("standard")
   const [easyInput, setEasyInput] = useState("")
   const [easyError, setEasyError] = useState<string | null>(null)
+  const [lastInteractedMessageId, setLastInteractedMessageId] = useState<string | null>(null)
   const [toast, setToast] = useState<{ message: string; tone: "success" | "error" } | null>(null)
   const toastTimerRef = useRef<number | null>(null)
 
@@ -187,10 +239,14 @@ export const ConversationBuilder = () => {
       hasMixedDates: uniqueDates.size > 1,
     }
   }, [messages])
+  const participantsById = useMemo(
+    () => new Map(participants.map((participant) => [participant.id, participant])),
+    [participants],
+  )
   const effectiveGlobalDateInput = messages.length === 0 ? "" : globalDateInput || globalDate
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 2 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
   )
 
@@ -203,6 +259,7 @@ export const ConversationBuilder = () => {
     const index = messages.findIndex((message) => message.id === messageId)
     const targetIndex = index + direction
     if (index === -1 || targetIndex < 0 || targetIndex >= messages.length) return
+    setLastInteractedMessageId(messageId)
     setMessages(arrayMove(messages, index, targetIndex))
   }
 
@@ -275,6 +332,26 @@ export const ConversationBuilder = () => {
       setToast(null)
       toastTimerRef.current = null
     }, 2400)
+  }
+
+  const findCreatedMessageId = (previousMessages: Message[]) => {
+    const previousIds = new Set(previousMessages.map((message) => message.id))
+    const nextMessages = useConversationStore.getState().conversation.messages
+
+    for (let index = nextMessages.length - 1; index >= 0; index -= 1) {
+      if (!previousIds.has(nextMessages[index].id)) {
+        return nextMessages[index].id
+      }
+    }
+
+    return null
+  }
+
+  const highlightCreatedMessage = (previousMessages: Message[]) => {
+    const createdMessageId = findCreatedMessageId(previousMessages)
+    if (createdMessageId) {
+      setLastInteractedMessageId(createdMessageId)
+    }
   }
 
   useEffect(
@@ -361,6 +438,7 @@ export const ConversationBuilder = () => {
     })
 
     setMessages(nextMessages)
+    setLastInteractedMessageId(nextMessages[nextMessages.length - 1]?.id ?? null)
     setEasyError(null)
     showToast("Easy changes applied.")
   }
@@ -396,6 +474,7 @@ export const ConversationBuilder = () => {
     if (!shouldPreserveNaturalTime) {
       updateMessage(messageId, payload)
       setEditingId(null)
+      setLastInteractedMessageId(messageId)
       return
     }
 
@@ -405,6 +484,7 @@ export const ConversationBuilder = () => {
     const { messages: normalizedMessages } = normalizeNaturalTimeline(updatedMessages, messageIndex)
     setMessages(normalizedMessages)
     setEditingId(null)
+    setLastInteractedMessageId(messageId)
     showToast("Updated message timing and preserved a natural timeline.")
   }
 
@@ -426,6 +506,7 @@ export const ConversationBuilder = () => {
     const anchorTimestamp = messages[messageIndex].timestamp
     if (Number.isNaN(new Date(anchorTimestamp).getTime())) return
 
+    setLastInteractedMessageId(messageId)
     setMessages(
       messages.map((message, index) =>
         index > messageIndex ? { ...message, timestamp: anchorTimestamp } : message,
@@ -608,10 +689,15 @@ export const ConversationBuilder = () => {
                 sensors={sensors}
                 collisionDetection={closestCenter}
                 modifiers={[restrictToVerticalAxis]}
+                onDragStart={({ active }) => {
+                  setLastInteractedMessageId(String(active.id))
+                }}
                 onDragEnd={({ active, over }) => {
-                  if (!over || active.id === over.id) return
-                  const oldIndex = messages.findIndex((message) => message.id === active.id)
-                  const newIndex = messages.findIndex((message) => message.id === over.id)
+                  const activeId = String(active.id)
+                  setLastInteractedMessageId(activeId)
+                  if (!over || activeId === String(over.id)) return
+                  const oldIndex = messages.findIndex((message) => message.id === activeId)
+                  const newIndex = messages.findIndex((message) => message.id === String(over.id))
                   if (oldIndex === -1 || newIndex === -1) return
                   setMessages(arrayMove(messages, oldIndex, newIndex))
                 }}
@@ -629,26 +715,33 @@ export const ConversationBuilder = () => {
                         <div key={message.id} className="space-y-2">
                           <MessageRow
                             message={message}
+                            sender={participantsById.get(message.senderId)}
+                            isHighlighted={lastInteractedMessageId === message.id}
                             onEdit={() => {
+                              setLastInteractedMessageId(message.id)
                               setEditingId(message.id)
                               setIsAdvancedOpen(false)
                               setOpenActionsId(null)
                             }}
-                            onToggleVisibility={() =>
+                            onToggleVisibility={() => {
+                              setLastInteractedMessageId(message.id)
                               updateMessage(message.id, { isHidden: !message.isHidden })
-                            }
+                            }}
                             onDuplicate={() => {
                               duplicateMessageEnd(message.id)
+                              highlightCreatedMessage(messages)
                               setOpenActionsId(null)
                             }}
                             onDelete={() => {
+                              setLastInteractedMessageId(message.id)
                               deleteMessage(message.id)
                               setOpenActionsId(null)
                             }}
                             isActionsOpen={isActionsOpen}
-                            onToggleActions={() =>
+                            onToggleActions={() => {
+                              setLastInteractedMessageId(message.id)
                               setOpenActionsId((current) => (current === message.id ? null : message.id))
-                            }
+                            }}
                           />
                           {isActionsOpen ? (
                             <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2">
@@ -676,6 +769,7 @@ export const ConversationBuilder = () => {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => {
+                                  setLastInteractedMessageId(message.id)
                                   updateMessage(message.id, { isHidden: !message.isHidden })
                                   setOpenActionsId(null)
                                 }}
@@ -688,6 +782,7 @@ export const ConversationBuilder = () => {
                                 size="sm"
                                 onClick={() => {
                                   duplicateMessageNext(message.id)
+                                  highlightCreatedMessage(messages)
                                   setOpenActionsId(null)
                                 }}
                               >
@@ -697,7 +792,10 @@ export const ConversationBuilder = () => {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => applyMessageTimeToNextMessages(message.id)}
+                                onClick={() => {
+                                  setLastInteractedMessageId(message.id)
+                                  applyMessageTimeToNextMessages(message.id)
+                                }}
                               >
                                 <ClockArrowUp className="h-4 w-4" />
                                 Time
@@ -707,6 +805,7 @@ export const ConversationBuilder = () => {
                                 size="sm"
                                 onClick={() => {
                                   duplicateMessageStart(message.id)
+                                  highlightCreatedMessage(messages)
                                   setOpenActionsId(null)
                                 }}
                               >
@@ -718,6 +817,7 @@ export const ConversationBuilder = () => {
                                 size="sm"
                                 onClick={() => {
                                   duplicateMessageEnd(message.id)
+                                  highlightCreatedMessage(messages)
                                   setOpenActionsId(null)
                                 }}
                               >
@@ -729,6 +829,7 @@ export const ConversationBuilder = () => {
                                 size="sm"
                                 className="sm:hidden"
                                 onClick={() => {
+                                  setLastInteractedMessageId(message.id)
                                   deleteMessage(message.id)
                                   setOpenActionsId(null)
                                 }}
@@ -747,9 +848,15 @@ export const ConversationBuilder = () => {
                                 defaultSenderId={activeParticipantId}
                                 compact
                                 advancedOpen={isAdvancedOpen}
-                                onToggleAdvanced={() => setIsAdvancedOpen((prev) => !prev)}
+                                onToggleAdvanced={() => {
+                                  setLastInteractedMessageId(message.id)
+                                  setIsAdvancedOpen((prev) => !prev)
+                                }}
                                 onSubmit={(payload) => handleMessageSave(message.id, payload)}
-                                onCancel={() => setEditingId(null)}
+                                onCancel={() => {
+                                  setLastInteractedMessageId(message.id)
+                                  setEditingId(null)
+                                }}
                                 submitLabel="Save changes"
                               />
                             </div>
@@ -778,6 +885,7 @@ export const ConversationBuilder = () => {
                     resetOnSubmit
                     onSubmit={(payload) => {
                       addMessage(payload)
+                      highlightCreatedMessage(messages)
                     }}
                     submitLabel="Add message"
                   />

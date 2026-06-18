@@ -359,7 +359,7 @@ export const MainLayout = () => {
           </CardContent>
         </Card>
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(320px,420px)_1fr]">
+        <div className="grid gap-6 lg:grid-cols-[minmax(420px,620px)_1fr]">
           <aside
             className={cn(
               "space-y-6",
