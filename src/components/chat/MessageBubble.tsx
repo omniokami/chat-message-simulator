@@ -51,7 +51,6 @@ const statusIcon = (status: Message["status"], className?: string) => {
 
 const shouldUseObjectUrl = (url?: string): url is string => Boolean(url?.startsWith("data:image/"))
 const MAX_MESSAGE_IMAGE_WIDTH = 240
-const MAX_MESSAGE_IMAGE_HEIGHT = 256
 
 const dataUrlToBlob = (dataUrl: string) => {
   const commaIndex = dataUrl.indexOf(",")
@@ -108,7 +107,6 @@ interface MessageImageTileProps {
   imageKey: string
   imageRadius: string
   className?: string
-  frameStyle?: React.CSSProperties
   imageClassName?: string
   imageWidth?: number
   imageHeight?: number
@@ -125,7 +123,6 @@ const MessageImageTile = ({
   imageKey,
   imageRadius,
   className,
-  frameStyle,
   imageClassName,
   imageWidth,
   imageHeight,
@@ -221,7 +218,6 @@ const MessageImageTile = ({
       data-image-spoiler={showSpoiler ? "true" : undefined}
       data-export-spoiler={showSpoiler ? String(shouldExportSpoiler) : undefined}
       data-spoiler-blur={showSpoiler ? spoilerBlur : undefined}
-      style={frameStyle}
       onClick={() => {
         if (isSpoilerCovered) {
           onSpoilerRevealChange(imageKey, true)
@@ -391,17 +387,6 @@ export const MessageBubble = ({
   )
   const imageWidth = hasImageDimensions ? primaryImage?.width : undefined
   const imageHeight = hasImageDimensions ? primaryImage?.height : undefined
-  const imageScale =
-    imageWidth && imageHeight
-      ? Math.min(MAX_MESSAGE_IMAGE_WIDTH / imageWidth, MAX_MESSAGE_IMAGE_HEIGHT / imageHeight)
-      : 1
-  const imageFrameStyle: React.CSSProperties | undefined =
-    imageWidth && imageHeight
-      ? {
-          width: Math.round(imageWidth * imageScale),
-          height: Math.round(imageHeight * imageScale),
-        }
-      : undefined
   const showBubbleSideError = showInstagramError || showIMessageError
   const showMessengerAvatar = isMessenger && !isOwn && Boolean(showAvatar)
   const showInstagramAvatar = isInstagram && !isOwn && Boolean(showAvatar)
@@ -561,13 +546,8 @@ export const MessageBubble = ({
                 image={primaryImage}
                 imageKey={getImageRevealKey(primaryImage)}
                 imageRadius={imageRadius}
-                className="w-fit max-w-[240px] border border-white/20"
-                frameStyle={imageFrameStyle}
-                imageClassName={
-                  imageFrameStyle
-                    ? "h-full w-full object-cover"
-                    : "max-h-64 max-w-[240px] object-contain"
-                }
+                className="w-full max-w-[240px] border border-white/20"
+                imageClassName="max-h-64 w-full max-w-[240px] object-cover"
                 imageWidth={imageWidth}
                 imageHeight={imageHeight}
                 spoilerBlur={resolvedSpoilerBlur}
