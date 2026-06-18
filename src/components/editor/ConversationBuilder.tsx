@@ -150,6 +150,15 @@ const MessageRow = ({
         <div
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--muted))] text-[0.65rem] font-semibold text-[hsl(var(--muted-foreground))]"
           title={sender?.name ?? "Unknown sender"}
+          style={
+            sender?.color
+              ? {
+                  backgroundColor: `color-mix(in srgb, ${sender.color} 18%, transparent)`,
+                  borderColor: `color-mix(in srgb, ${sender.color} 45%, hsl(var(--border)))`,
+                  color: sender.color,
+                }
+              : undefined
+          }
         >
           {avatarFallback}
         </div>
@@ -525,16 +534,16 @@ export const ConversationBuilder = () => {
 
   return (
     <TooltipProvider>
-      <div className="space-y-4">
-        <div>
+      <div className="flex min-h-0 flex-1 flex-col gap-4">
+        <div className="shrink-0">
           <h3 className="text-sm font-semibold text-[hsl(var(--foreground))]">Conversation Builder</h3>
           <p className="text-xs text-[hsl(var(--muted-foreground))]">
             Add messages, drag to reorder, or switch to Easy mode for bulk edits.
           </p>
         </div>
 
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex min-h-0 flex-1 flex-col gap-2">
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
             <h4 className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">Messages</h4>
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs text-[hsl(var(--muted-foreground))]">{messages.length} total</span>
@@ -604,7 +613,7 @@ export const ConversationBuilder = () => {
               </Button>
             </div>
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2">
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2">
             <div className="space-y-1">
               <div className="text-xs font-semibold uppercase text-[hsl(var(--muted-foreground))]">Editor view</div>
               <p className="text-xs text-[hsl(var(--muted-foreground))]">Switch between the list and easy text editor.</p>
@@ -679,7 +688,7 @@ export const ConversationBuilder = () => {
               </div>
             </div>
           ) : (
-            <>
+            <div className="min-h-0 flex-1 overflow-y-auto pr-1 [scrollbar-gutter:stable]">
               {messages.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-4 py-6 text-center text-xs text-[hsl(var(--muted-foreground))]">
                   No messages yet. Add the first entry above.
@@ -867,11 +876,11 @@ export const ConversationBuilder = () => {
                   </div>
                 </SortableContext>
               </DndContext>
-            </>
+            </div>
           )}
         </div>
         {viewMode === "standard" ? (
-          <>
+          <div className="shrink-0 space-y-3">
             <Separator />
             <div className="space-y-3">
               {isAddOpen ? (
@@ -900,7 +909,7 @@ export const ConversationBuilder = () => {
                 {isAddOpen ? "Hide add message" : "Add message"}
               </Button>
             </div>
-          </>
+          </div>
         ) : null}
       </div>
       {toast ? (

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import {
   BookOpen,
   Download,
@@ -57,6 +57,7 @@ const getSharedLoadErrorMessage = (error: unknown) =>
 
 export const MainLayout = () => {
   const fullExportRef = useRef<HTMLDivElement | null>(null)
+  const mainColumnRef = useRef<HTMLElement | null>(null)
   const handledInitialSharingRef = useRef(false)
   const conversation = useConversationStore((state) => state.conversation)
   const layoutId = useConversationStore((state) => state.layoutId)
@@ -81,6 +82,7 @@ export const MainLayout = () => {
   const [isQuickPreviewing, setIsQuickPreviewing] = useState(false)
   const [isQuickPreviewOpen, setIsQuickPreviewOpen] = useState(false)
   const [isReaderOpen, setIsReaderOpen] = useState(false)
+  const [mainColumnHeight, setMainColumnHeight] = useState<number | null>(null)
   const [sharedLoadStatus, setSharedLoadStatus] = useState<{
     type: "loading" | "error"
     message: string
@@ -228,6 +230,34 @@ export const MainLayout = () => {
     previousActivePanelRef.current = ui.activePanel
   }, [setUi, ui.activePanel, ui.activeView, ui.isSidebarOpen])
 
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const node = mainColumnRef.current
+    if (!node) return
+
+    const updateMainColumnHeight = () => {
+      const nextHeight = Math.ceil(node.getBoundingClientRect().height)
+      setMainColumnHeight((currentHeight) =>
+        currentHeight === nextHeight ? currentHeight : nextHeight,
+      )
+    }
+
+    updateMainColumnHeight()
+    window.addEventListener("resize", updateMainColumnHeight)
+
+    if (typeof ResizeObserver === "undefined") {
+      return () => window.removeEventListener("resize", updateMainColumnHeight)
+    }
+
+    const resizeObserver = new ResizeObserver(updateMainColumnHeight)
+    resizeObserver.observe(node)
+
+    return () => {
+      window.removeEventListener("resize", updateMainColumnHeight)
+      resizeObserver.disconnect()
+    }
+  }, [])
+
   const appliedScale = previewViewport.appliedScale
   const resolvedExportHeight =
     exportSettings.captureMode === "full"
@@ -279,6 +309,10 @@ export const MainLayout = () => {
 
   const quickPresetIds = new Set(["iphone-14-pro", "ipad", "desktop"])
   const quickPresets: SizePreset[] = sizePresets.filter((preset) => quickPresetIds.has(preset.id))
+  const constrainBuilderSidebar = ui.activePanel === "messages" && mainColumnHeight !== null
+  const builderSidebarStyle: CSSProperties | undefined = constrainBuilderSidebar
+    ? { "--builder-sidebar-max-height": `${mainColumnHeight}px` } as CSSProperties
+    : undefined
 
   return (
     <div
@@ -366,8 +400,22 @@ export const MainLayout = () => {
               ui.isSidebarOpen && ui.activeView !== "preview" ? "block" : "hidden",
             )}
           >
-            <Card className="workspace-perf-contained">
-              <CardContent className="space-y-6">
+            <Card
+              className={cn(
+                "workspace-perf-contained",
+                ui.activePanel === "messages" &&
+                  "lg:flex lg:min-h-0 lg:flex-col lg:overflow-hidden",
+                constrainBuilderSidebar && "lg:max-h-[var(--builder-sidebar-max-height)]",
+              )}
+              style={builderSidebarStyle}
+            >
+              <CardContent
+                className={cn(
+                  "space-y-6",
+                  ui.activePanel === "messages" &&
+                    "lg:flex lg:min-h-0 lg:flex-1 lg:flex-col lg:overflow-hidden",
+                )}
+              >
                 {ui.activePanel === "participants" ? <ParticipantManager /> : null}
                 {ui.activePanel === "messages" ? <ConversationBuilder /> : null}
                 {ui.activePanel === "settings" ? <SettingsPanel /> : null}
@@ -391,7 +439,10 @@ export const MainLayout = () => {
             </Card>
           </aside>
 
-          <main className={cn("space-y-4", ui.activeView === "editor" && "hidden lg:block")}>
+          <main
+            ref={mainColumnRef}
+            className={cn("space-y-4", ui.activeView === "editor" && "hidden lg:block")}
+          >
             <Card className="workspace-perf-contained">
               <CardHeader className="space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
