@@ -55,9 +55,11 @@ const buildDownloadName = (format: "png" | "jpeg", index?: number) => {
 const getSharedLoadErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : "Could not load the shared project."
 
+const BUILDER_STICKY_TOP = 16
+const BUILDER_VIEWPORT_HEIGHT = `calc(100dvh - ${BUILDER_STICKY_TOP * 2}px)`
+
 export const MainLayout = () => {
   const fullExportRef = useRef<HTMLDivElement | null>(null)
-  const mainColumnRef = useRef<HTMLElement | null>(null)
   const handledInitialSharingRef = useRef(false)
   const conversation = useConversationStore((state) => state.conversation)
   const layoutId = useConversationStore((state) => state.layoutId)
@@ -82,7 +84,6 @@ export const MainLayout = () => {
   const [isQuickPreviewing, setIsQuickPreviewing] = useState(false)
   const [isQuickPreviewOpen, setIsQuickPreviewOpen] = useState(false)
   const [isReaderOpen, setIsReaderOpen] = useState(false)
-  const [mainColumnHeight, setMainColumnHeight] = useState<number | null>(null)
   const [sharedLoadStatus, setSharedLoadStatus] = useState<{
     type: "loading" | "error"
     message: string
@@ -230,34 +231,6 @@ export const MainLayout = () => {
     previousActivePanelRef.current = ui.activePanel
   }, [setUi, ui.activePanel, ui.activeView, ui.isSidebarOpen])
 
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    const node = mainColumnRef.current
-    if (!node) return
-
-    const updateMainColumnHeight = () => {
-      const nextHeight = Math.ceil(node.getBoundingClientRect().height)
-      setMainColumnHeight((currentHeight) =>
-        currentHeight === nextHeight ? currentHeight : nextHeight,
-      )
-    }
-
-    updateMainColumnHeight()
-    window.addEventListener("resize", updateMainColumnHeight)
-
-    if (typeof ResizeObserver === "undefined") {
-      return () => window.removeEventListener("resize", updateMainColumnHeight)
-    }
-
-    const resizeObserver = new ResizeObserver(updateMainColumnHeight)
-    resizeObserver.observe(node)
-
-    return () => {
-      window.removeEventListener("resize", updateMainColumnHeight)
-      resizeObserver.disconnect()
-    }
-  }, [])
-
   const appliedScale = previewViewport.appliedScale
   const resolvedExportHeight =
     exportSettings.captureMode === "full"
@@ -309,9 +282,9 @@ export const MainLayout = () => {
 
   const quickPresetIds = new Set(["iphone-14-pro", "ipad", "desktop"])
   const quickPresets: SizePreset[] = sizePresets.filter((preset) => quickPresetIds.has(preset.id))
-  const constrainBuilderSidebar = ui.activePanel === "messages" && mainColumnHeight !== null
+  const constrainBuilderSidebar = ui.activePanel === "messages"
   const builderSidebarStyle: CSSProperties | undefined = constrainBuilderSidebar
-    ? { "--builder-sidebar-max-height": `${mainColumnHeight}px` } as CSSProperties
+    ? { "--builder-sidebar-height": BUILDER_VIEWPORT_HEIGHT } as CSSProperties
     : undefined
 
   return (
@@ -393,11 +366,12 @@ export const MainLayout = () => {
           </CardContent>
         </Card>
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(420px,620px)_1fr]">
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(420px,620px)_1fr]">
           <aside
             className={cn(
               "space-y-6",
               ui.isSidebarOpen && ui.activeView !== "preview" ? "block" : "hidden",
+              ui.activePanel === "messages" && "lg:sticky lg:top-4 lg:self-start",
             )}
           >
             <Card
@@ -405,7 +379,8 @@ export const MainLayout = () => {
                 "workspace-perf-contained",
                 ui.activePanel === "messages" &&
                   "lg:flex lg:min-h-0 lg:flex-col lg:overflow-hidden",
-                constrainBuilderSidebar && "lg:max-h-[var(--builder-sidebar-max-height)]",
+                constrainBuilderSidebar &&
+                  "lg:h-[var(--builder-sidebar-height)] lg:max-h-[var(--builder-sidebar-height)]",
               )}
               style={builderSidebarStyle}
             >
@@ -439,10 +414,7 @@ export const MainLayout = () => {
             </Card>
           </aside>
 
-          <main
-            ref={mainColumnRef}
-            className={cn("space-y-4", ui.activeView === "editor" && "hidden lg:block")}
-          >
+          <main className={cn("min-w-0 space-y-4", ui.activeView === "editor" && "hidden lg:block")}>
             <Card className="workspace-perf-contained">
               <CardHeader className="space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -459,7 +431,12 @@ export const MainLayout = () => {
                     onResetZoom={() => setUi({ zoom: 1 })}
                     onJump={previewViewport.scrollConversation}
                     modeActions={
-                      <Button variant="default" size="sm" onClick={() => setIsReaderOpen(true)}>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="h-9 shrink-0"
+                        onClick={() => setIsReaderOpen(true)}
+                      >
                         <BookOpen className="h-4 w-4" />
                         <span className="hidden sm:inline">Reader mode</span>
                       </Button>

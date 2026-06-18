@@ -688,7 +688,9 @@ export const ConversationBuilder = () => {
               </div>
             </div>
           ) : (
-            <div className="min-h-0 flex-1 overflow-y-auto pr-1 [scrollbar-gutter:stable]">
+            <div
+              className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 [scrollbar-gutter:stable]"
+            >
               {messages.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-4 py-6 text-center text-xs text-[hsl(var(--muted-foreground))]">
                   No messages yet. Add the first entry above.

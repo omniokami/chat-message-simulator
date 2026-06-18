@@ -243,7 +243,12 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
                   onJump={readerViewport.scrollConversation}
                   modeActions={
                     <>
-                      <Button variant="default" size="sm" onClick={enterEditMode}>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="h-9 shrink-0"
+                        onClick={enterEditMode}
+                      >
                         <PencilLine className="h-4 w-4" />
                         <span className="hidden sm:inline">Edit mode</span>
                       </Button>
