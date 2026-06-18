@@ -41,6 +41,8 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/utils/cn"
 import { exportNodeToImageSequence } from "@/utils/export"
+import { fetchSharedConversation, getAppRootUrl, parseSharingLink } from "@/utils/sharing"
+import { loadConversationData } from "@/utils/storage"
 
 const buildDownloadName = (format: "png" | "jpeg", index?: number) => {
   const extension = format === "jpeg" ? "jpg" : "png"
@@ -50,8 +52,12 @@ const buildDownloadName = (format: "png" | "jpeg", index?: number) => {
   return `chat-export-${String(index + 1).padStart(2, "0")}.${extension}`
 }
 
+const getSharedLoadErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : "Could not load the shared project."
+
 export const MainLayout = () => {
   const fullExportRef = useRef<HTMLDivElement | null>(null)
+  const handledInitialSharingRef = useRef(false)
   const conversation = useConversationStore((state) => state.conversation)
   const layoutId = useConversationStore((state) => state.layoutId)
   const themeId = useConversationStore((state) => state.themeId)
@@ -63,6 +69,7 @@ export const MainLayout = () => {
   const spoilerBlur = useConversationStore((state) => state.spoilerBlur)
   const ui = useConversationStore((state) => state.ui)
   const previousActivePanelRef = useRef(ui.activePanel)
+  const loadConversation = useConversationStore((state) => state.loadConversation)
   const setUi = useConversationStore((state) => state.setUi)
   const exportSettings = useConversationStore((state) => state.exportSettings)
   const setExportSettings = useConversationStore((state) => state.setExportSettings)
@@ -74,6 +81,10 @@ export const MainLayout = () => {
   const [isQuickPreviewing, setIsQuickPreviewing] = useState(false)
   const [isQuickPreviewOpen, setIsQuickPreviewOpen] = useState(false)
   const [isReaderOpen, setIsReaderOpen] = useState(false)
+  const [sharedLoadStatus, setSharedLoadStatus] = useState<{
+    type: "loading" | "error"
+    message: string
+  } | null>(null)
 
   const handleQuickExport = async (mode: "download" | "preview") => {
     const target =
@@ -181,6 +192,35 @@ export const MainLayout = () => {
   }, [setUi])
 
   useEffect(() => {
+    if (handledInitialSharingRef.current || typeof window === "undefined") return
+
+    const sharingPayload = parseSharingLink(window.location.href)
+    if (!sharingPayload) return
+
+    handledInitialSharingRef.current = true
+    setSharedLoadStatus({ type: "loading", message: "Loading shared project..." })
+
+    void (async () => {
+      try {
+        const data = await fetchSharedConversation(sharingPayload.sourceUrl)
+        loadConversationData(data, loadConversation)
+        window.history.replaceState(null, "", getAppRootUrl())
+        if (sharingPayload.openInReader) {
+          setIsReaderOpen(true)
+        } else {
+          setUi({ activeView: "editor", isSidebarOpen: true })
+        }
+        setSharedLoadStatus(null)
+      } catch (error) {
+        setSharedLoadStatus({
+          type: "error",
+          message: getSharedLoadErrorMessage(error),
+        })
+      }
+    })()
+  }, [loadConversation, setUi])
+
+  useEffect(() => {
     if (previousActivePanelRef.current !== ui.activePanel && (ui.activeView === "preview" || !ui.isSidebarOpen)) {
       setUi({ activeView: "editor", isSidebarOpen: true })
     }
@@ -249,7 +289,23 @@ export const MainLayout = () => {
       )}
     >
       <div className="workspace-stack mx-auto flex flex-col gap-6 px-4 pt-6 pb-24 lg:pb-6">
-        <Toolbar />
+        <Toolbar onOpenReader={() => setIsReaderOpen(true)} />
+
+        {sharedLoadStatus ? (
+          <div
+            role={sharedLoadStatus.type === "error" ? "alert" : "status"}
+            className={cn(
+              "rounded-xl border px-4 py-3 text-sm shadow-sm",
+              sharedLoadStatus.type === "error"
+                ? "border-red-500/30 bg-red-500/10 text-red-200"
+                : isEditorDark
+                  ? "border-sky-500/30 bg-sky-500/10 text-sky-100"
+                  : "border-sky-200 bg-sky-50 text-sky-950",
+            )}
+          >
+            {sharedLoadStatus.message}
+          </div>
+        ) : null}
 
         <Card className="workspace-perf-contained">
           <CardContent className="space-y-3 py-4">

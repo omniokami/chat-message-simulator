@@ -19,7 +19,7 @@ import { Switch } from "@/components/ui/switch"
 import { useConversationViewport } from "@/hooks/useConversationViewport"
 import { useConversationStore } from "@/store/conversationStore"
 import { cn } from "@/utils/cn"
-import { readJsonFile } from "@/utils/storage"
+import { loadConversationData, readJsonFile } from "@/utils/storage"
 
 interface ReaderModeProps {
   open: boolean
@@ -329,15 +329,7 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
               if (!file) return
               try {
                 const data = await readJsonFile(file)
-                // Check if it's the new format with appearance settings
-                if ("conversation" in data) {
-                  // New format: ConversationWithAppearance
-                  const { conversation: conv, ...appearance } = data
-                  loadConversation(conv, appearance)
-                } else {
-                  // Old format: just Conversation
-                  loadConversation(data)
-                }
+                loadConversationData(data, loadConversation)
                 setLoadScrollResetToken((token) => token + 1)
                 setLoadError(null)
               } catch (error) {

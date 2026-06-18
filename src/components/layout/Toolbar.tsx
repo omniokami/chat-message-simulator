@@ -1,10 +1,32 @@
 import { useEffect, useRef, useState } from "react"
-import { FileDown, FileUp, MoreHorizontal, Redo2, Save, Trash2, Undo2 } from "lucide-react"
+import {
+  Check,
+  Copy,
+  FileDown,
+  FileUp,
+  Link2,
+  Loader2,
+  MoreHorizontal,
+  Redo2,
+  Save,
+  Trash2,
+  Undo2,
+} from "lucide-react"
 import { useConversationStore } from "@/store/conversationStore"
 import { getLayoutConfig } from "@/constants/layouts"
-import { downloadJson, readJsonFile } from "@/utils/storage"
+import { downloadJson, loadConversationData, readJsonFile } from "@/utils/storage"
+import {
+  createSharingLink,
+  fetchSharedConversation,
+  normalizeTrustedSourceUrl,
+  parseSharingLink,
+  resolveSharedSourceUrl,
+} from "@/utils/sharing"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { getMessageImages } from "@/utils/messageImages"
 import {
@@ -17,6 +39,10 @@ import {
 } from "@/components/ui/dialog"
 
 type StoreState = ReturnType<typeof useConversationStore.getState>
+
+interface ToolbarProps {
+  onOpenReader?: () => void
+}
 
 const hasPersistedChange = (state: StoreState, prevState: StoreState) =>
   state.conversation !== prevState.conversation ||
@@ -41,11 +67,44 @@ const formatRelativeTime = (from: number, to: number) => {
   return `${diffDays}d ago`
 }
 
-export const Toolbar = () => {
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback
+
+const copyTextToClipboard = async (text: string) => {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text)
+    return
+  }
+
+  const textarea = document.createElement("textarea")
+  textarea.value = text
+  textarea.setAttribute("readonly", "true")
+  textarea.style.position = "fixed"
+  textarea.style.left = "-9999px"
+  document.body.appendChild(textarea)
+  textarea.select()
+  document.execCommand("copy")
+  textarea.remove()
+}
+
+export const Toolbar = ({ onOpenReader }: ToolbarProps) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const copyTimeoutRef = useRef<number | null>(null)
   const [isActionsOpen, setIsActionsOpen] = useState(false)
   const [now, setNow] = useState(() => Date.now())
   const [isResetOpen, setIsResetOpen] = useState(false)
+  const [isCreateShareOpen, setIsCreateShareOpen] = useState(false)
+  const [isLoadLinkOpen, setIsLoadLinkOpen] = useState(false)
+  const [createShareUrl, setCreateShareUrl] = useState("")
+  const [createShareOpenInReader, setCreateShareOpenInReader] = useState(false)
+  const [createShareResult, setCreateShareResult] = useState("")
+  const [createShareError, setCreateShareError] = useState<string | null>(null)
+  const [isCreateShareGenerating, setIsCreateShareGenerating] = useState(false)
+  const [copyState, setCopyState] = useState<"idle" | "copied">("idle")
+  const [loadLinkUrl, setLoadLinkUrl] = useState("")
+  const [loadLinkOpenInReader, setLoadLinkOpenInReader] = useState(false)
+  const [loadLinkError, setLoadLinkError] = useState<string | null>(null)
+  const [isLoadingFromLink, setIsLoadingFromLink] = useState(false)
   const conversation = useConversationStore((state) => state.conversation)
   const layoutId = useConversationStore((state) => state.layoutId)
   const themeId = useConversationStore((state) => state.themeId)
@@ -57,6 +116,7 @@ export const Toolbar = () => {
   const resetConversation = useConversationStore((state) => state.resetConversation)
   const saveSnapshot = useConversationStore((state) => state.saveSnapshot)
   const clearSnapshot = useConversationStore((state) => state.clearSnapshot)
+  const setUi = useConversationStore((state) => state.setUi)
   const lastAutosaveAt = useConversationStore((state) => state.lastAutosaveAt)
   const setLastAutosaveAt = useConversationStore((state) => state.setLastAutosaveAt)
   const undo = useConversationStore((state) => state.undo)
@@ -68,6 +128,15 @@ export const Toolbar = () => {
     const interval = window.setInterval(() => setNow(Date.now()), 30000)
     return () => window.clearInterval(interval)
   }, [])
+
+  useEffect(
+    () => () => {
+      if (copyTimeoutRef.current) {
+        window.clearTimeout(copyTimeoutRef.current)
+      }
+    },
+    [],
+  )
 
   useEffect(() => {
     const unsubscribe = useConversationStore.subscribe((state, prevState) => {
@@ -107,6 +176,91 @@ export const Toolbar = () => {
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [canRedo, canUndo, redo, undo])
+
+  const resetCreateShareDialog = () => {
+    setCreateShareUrl("")
+    setCreateShareOpenInReader(false)
+    setCreateShareResult("")
+    setCreateShareError(null)
+    setIsCreateShareGenerating(false)
+    setCopyState("idle")
+  }
+
+  const resetLoadLinkDialog = () => {
+    setLoadLinkUrl("")
+    setLoadLinkOpenInReader(false)
+    setLoadLinkError(null)
+    setIsLoadingFromLink(false)
+  }
+
+  const handleGenerateSharingLink = async () => {
+    setIsCreateShareGenerating(true)
+    setCreateShareError(null)
+    setCreateShareResult("")
+    setCopyState("idle")
+
+    try {
+      const sourceUrl = normalizeTrustedSourceUrl(createShareUrl)
+      await fetchSharedConversation(sourceUrl)
+      setCreateShareUrl(sourceUrl)
+      setCreateShareResult(createSharingLink(sourceUrl, createShareOpenInReader))
+    } catch (error) {
+      setCreateShareError(getErrorMessage(error, "Could not create a sharing link."))
+    } finally {
+      setIsCreateShareGenerating(false)
+    }
+  }
+
+  const handleCopySharingLink = async () => {
+    if (!createShareResult) return
+
+    try {
+      await copyTextToClipboard(createShareResult)
+      setCopyState("copied")
+      if (copyTimeoutRef.current) {
+        window.clearTimeout(copyTimeoutRef.current)
+      }
+      copyTimeoutRef.current = window.setTimeout(() => setCopyState("idle"), 1800)
+    } catch (error) {
+      setCreateShareError(getErrorMessage(error, "Could not copy the sharing link."))
+    }
+  }
+
+  const handleLoadLinkChange = (value: string) => {
+    setLoadLinkUrl(value)
+    setLoadLinkError(null)
+
+    const sharingPayload = parseSharingLink(value)
+    setLoadLinkOpenInReader(sharingPayload?.openInReader ?? false)
+  }
+
+  const openLoadedConversationMode = () => {
+    if (loadLinkOpenInReader) {
+      onOpenReader?.()
+      return
+    }
+
+    setUi({ activeView: "editor", isSidebarOpen: true })
+  }
+
+  const handleLoadFromLink = async () => {
+    setIsLoadingFromLink(true)
+    setLoadLinkError(null)
+
+    try {
+      const sourceUrl = resolveSharedSourceUrl(loadLinkUrl)
+      const data = await fetchSharedConversation(sourceUrl)
+      loadConversationData(data, loadConversation)
+      setLastAutosaveAt(Date.now())
+      openLoadedConversationMode()
+      setIsLoadLinkOpen(false)
+      resetLoadLinkDialog()
+    } catch (error) {
+      setLoadLinkError(getErrorMessage(error, "Could not load from this link."))
+    } finally {
+      setIsLoadingFromLink(false)
+    }
+  }
 
   const autosaveLabel = lastAutosaveAt
     ? `Autosaved ${formatRelativeTime(lastAutosaveAt, now)}`
@@ -248,6 +402,33 @@ export const Toolbar = () => {
                 </div>
                 <div className="space-y-2">
                   <div className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
+                    Sharing
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        setIsActionsOpen(false)
+                        setIsCreateShareOpen(true)
+                      }}
+                    >
+                      <Link2 className="h-4 w-4" />
+                      Create sharing link
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        setIsActionsOpen(false)
+                        setIsLoadLinkOpen(true)
+                      }}
+                    >
+                      <FileUp className="h-4 w-4" />
+                      Load from link
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
                     Utilities
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -291,6 +472,173 @@ export const Toolbar = () => {
               </div>
             </DialogContent>
           </Dialog>
+          <Dialog
+            open={isCreateShareOpen}
+            onOpenChange={(open) => {
+              setIsCreateShareOpen(open)
+              if (!open) {
+                resetCreateShareDialog()
+              }
+            }}
+          >
+            <DialogContent className="sm:max-w-xl">
+              <DialogHeader>
+                <DialogTitle>Create sharing link</DialogTitle>
+                <DialogDescription>
+                  Generate an app link from a public GitHub or GitLab JSON save file.
+                </DialogDescription>
+              </DialogHeader>
+              <form
+                className="space-y-4"
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  void handleGenerateSharingLink()
+                }}
+              >
+                <div className="space-y-2">
+                  <Label htmlFor="create-share-url">JSON save file URL</Label>
+                  <Input
+                    id="create-share-url"
+                    value={createShareUrl}
+                    onChange={(event) => {
+                      setCreateShareUrl(event.target.value)
+                      setCreateShareError(null)
+                      setCreateShareResult("")
+                      setCopyState("idle")
+                    }}
+                    placeholder="https://github.com/owner/repo/blob/main/conversation.json"
+                    disabled={isCreateShareGenerating}
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-3 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--secondary))] px-3 py-2">
+                  <Label htmlFor="create-share-reader-mode">Open in Reader Mode</Label>
+                  <Switch
+                    id="create-share-reader-mode"
+                    checked={createShareOpenInReader}
+                    onCheckedChange={(value) => {
+                      setCreateShareOpenInReader(value)
+                      setCreateShareResult("")
+                      setCopyState("idle")
+                    }}
+                    disabled={isCreateShareGenerating}
+                  />
+                </div>
+                {createShareError ? (
+                  <div className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+                    {createShareError}
+                  </div>
+                ) : null}
+                {createShareResult ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="generated-share-url">Sharing link</Label>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <Input
+                        id="generated-share-url"
+                        value={createShareResult}
+                        readOnly
+                        className="font-mono text-xs"
+                        onFocus={(event) => event.currentTarget.select()}
+                      />
+                      <Button type="button" variant="outline" onClick={handleCopySharingLink}>
+                        {copyState === "copied" ? (
+                          <Check className="h-4 w-4" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                        {copyState === "copied" ? "Copied" : "Copy"}
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+                <div className="flex flex-wrap justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsCreateShareOpen(false)}
+                    disabled={isCreateShareGenerating}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={isCreateShareGenerating}>
+                    {isCreateShareGenerating ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Link2 className="h-4 w-4" />
+                    )}
+                    Generate
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+          <Dialog
+            open={isLoadLinkOpen}
+            onOpenChange={(open) => {
+              setIsLoadLinkOpen(open)
+              if (!open) {
+                resetLoadLinkDialog()
+              }
+            }}
+          >
+            <DialogContent className="sm:max-w-xl">
+              <DialogHeader>
+                <DialogTitle>Load from link</DialogTitle>
+                <DialogDescription>
+                  Open a GitHub or GitLab JSON save file, or a sharing link generated by this app.
+                </DialogDescription>
+              </DialogHeader>
+              <form
+                className="space-y-4"
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  void handleLoadFromLink()
+                }}
+              >
+                <div className="space-y-2">
+                  <Label htmlFor="load-link-url">Project link</Label>
+                  <Input
+                    id="load-link-url"
+                    value={loadLinkUrl}
+                    onChange={(event) => handleLoadLinkChange(event.target.value)}
+                    placeholder="https://github.com/owner/repo/blob/main/conversation.json"
+                    disabled={isLoadingFromLink}
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-3 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--secondary))] px-3 py-2">
+                  <Label htmlFor="load-link-reader-mode">Open in Reader Mode</Label>
+                  <Switch
+                    id="load-link-reader-mode"
+                    checked={loadLinkOpenInReader}
+                    onCheckedChange={setLoadLinkOpenInReader}
+                    disabled={isLoadingFromLink}
+                  />
+                </div>
+                {loadLinkError ? (
+                  <div className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+                    {loadLinkError}
+                  </div>
+                ) : null}
+                <div className="flex flex-wrap justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsLoadLinkOpen(false)}
+                    disabled={isLoadingFromLink}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={isLoadingFromLink}>
+                    {isLoadingFromLink ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <FileUp className="h-4 w-4" />
+                    )}
+                    Load
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
 
         <input
@@ -303,15 +651,7 @@ export const Toolbar = () => {
             if (!file) return
             try {
               const data = await readJsonFile(file)
-              // Check if it's the new format with appearance settings
-              if ("conversation" in data) {
-                // New format: ConversationWithAppearance
-                const { conversation: conv, ...appearance } = data
-                loadConversation(conv, appearance)
-              } else {
-                // Old format: just Conversation
-                loadConversation(data)
-              }
+              loadConversationData(data, loadConversation)
             } catch (error) {
               console.error("Failed to import JSON", error)
             } finally {
