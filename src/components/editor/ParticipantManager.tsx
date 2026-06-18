@@ -189,28 +189,26 @@ export const ParticipantManager = () => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <div className="flex flex-col gap-2">
-                  <Button
-                    variant={activeParticipantId === participant.id ? "default" : "outline"}
-                    size="sm"
-                    className={activeParticipantId === participant.id ? "border border-transparent" : undefined}
-                    onClick={() => setActiveParticipant(participant.id)}
-                  >
-                    <Star className="h-4 w-4" />
-                    Active
-                  </Button>
-                  <Button
-                    variant={viewParticipantId === participant.id ? "default" : "outline"}
-                    size="sm"
-                    className={viewParticipantId === participant.id ? "border border-transparent" : undefined}
-                    onClick={() => setViewParticipant(participant.id)}
-                  >
-                    <Eye className="h-4 w-4" />
-                    View as
-                  </Button>
-                </div>
-                <Button variant="ghost" size="icon" onClick={() => removeParticipant(participant.id)}>
+              <div className="grid shrink-0 grid-cols-[auto_auto] grid-rows-2 items-center gap-x-2 gap-y-2">
+                <Button
+                  variant={activeParticipantId === participant.id ? "default" : "outline"}
+                  size="sm"
+                  className={cn("col-start-1 row-start-1", activeParticipantId === participant.id && "border border-transparent")}
+                  onClick={() => setActiveParticipant(participant.id)}
+                >
+                  <Star className="h-4 w-4" />
+                  Active
+                </Button>
+                <Button
+                  variant={viewParticipantId === participant.id ? "default" : "outline"}
+                  size="sm"
+                  className={cn("col-start-1 row-start-2", viewParticipantId === participant.id && "border border-transparent")}
+                  onClick={() => setViewParticipant(participant.id)}
+                >
+                  <Eye className="h-4 w-4" />
+                  View as
+                </Button>
+                <Button variant="ghost" size="icon" className="col-start-2 row-span-2 row-start-1 self-center" onClick={() => removeParticipant(participant.id)}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
