@@ -1,7 +1,14 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { format } from "date-fns"
 import { ChevronLeft, ChevronRight, Download, ExternalLink, X } from "lucide-react"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+} from "react"
 import { AvatarImage } from "@/components/ui/avatar-image"
 import { Button } from "@/components/ui/button"
 import {
@@ -19,6 +26,9 @@ import { cn } from "@/utils/cn"
 const UI_HIDE_DELAY_MS = 2600
 const MAX_CAPTION_LENGTH = 100
 const OPEN_IN_NEW_TAB_OBJECT_URL_LIFETIME_MS = 60_000
+const viewerButtonPointerClass =
+  "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+const viewerControlSelector = "[data-viewer-control]"
 
 export interface ReaderImageEntry {
   id: string
@@ -110,6 +120,9 @@ const ViewerAvatar = ({
     </div>
   )
 }
+
+const isViewerControlTarget = (target: EventTarget | null) =>
+  target instanceof Element && Boolean(target.closest(viewerControlSelector))
 
 export const ReaderImageViewer = ({
   open,
@@ -233,6 +246,40 @@ export const ReaderImageViewer = ({
     setIsUiVisible(true)
     scheduleUiHide()
   }, [scheduleUiHide])
+
+  const goToPreviousImage = useCallback(() => {
+    if (!previousImage) return
+    revealUi()
+    onActiveImageChange(previousImage.id)
+  }, [onActiveImageChange, previousImage, revealUi])
+
+  const goToNextImage = useCallback(() => {
+    if (!nextImage) return
+    revealUi()
+    onActiveImageChange(nextImage.id)
+  }, [nextImage, onActiveImageChange, revealUi])
+
+  const handleImageStageMouseDown = useCallback((event: ReactMouseEvent<HTMLDivElement>) => {
+    if (event.button !== 0 || isViewerControlTarget(event.target)) return
+    event.preventDefault()
+  }, [])
+
+  const handleImageStageClick = useCallback(
+    (event: ReactMouseEvent<HTMLDivElement>) => {
+      if (event.button !== 0 || isViewerControlTarget(event.target)) return
+
+      const bounds = event.currentTarget.getBoundingClientRect()
+      const isLeftHalf = event.clientX < bounds.left + bounds.width / 2
+
+      if (isLeftHalf) {
+        goToPreviousImage()
+        return
+      }
+
+      goToNextImage()
+    },
+    [goToNextImage, goToPreviousImage],
+  )
 
   const findNearestFilteredImage = useCallback(
     (fromImageId: string) => {
@@ -415,15 +462,13 @@ export const ReaderImageViewer = ({
           onKeyDown={(event) => {
             if (event.key === "ArrowLeft" && previousImage) {
               event.preventDefault()
-              revealUi()
-              onActiveImageChange(previousImage.id)
+              goToPreviousImage()
               return
             }
 
             if (event.key === "ArrowRight" && nextImage) {
               event.preventDefault()
-              revealUi()
-              onActiveImageChange(nextImage.id)
+              goToNextImage()
               return
             }
 
@@ -441,12 +486,17 @@ export const ReaderImageViewer = ({
             <div className="relative h-full w-full overflow-hidden bg-transparent text-white">
               <div className="absolute inset-0 lg:right-[22rem]">
                 <div className="flex h-full flex-col">
-                  <div className="relative min-h-0 flex-1">
+                  <div
+                    className="relative min-h-0 flex-1 select-none"
+                    onMouseDown={handleImageStageMouseDown}
+                    onClick={handleImageStageClick}
+                  >
                     <div className="absolute inset-0 flex items-center justify-center px-3 py-4 sm:px-5 sm:py-5 lg:px-8 lg:py-8">
                       <img
                         src={displayImage.image.url}
                         alt={displayImage.message.content || "Chat image"}
-                        className="max-h-full max-w-full rounded-2xl object-contain shadow-[0_30px_80px_rgba(0,0,0,0.45)]"
+                        draggable={false}
+                        className="max-h-full max-w-full select-none rounded-2xl object-contain shadow-[0_30px_80px_rgba(0,0,0,0.45)]"
                       />
                     </div>
                     <div
@@ -458,10 +508,14 @@ export const ReaderImageViewer = ({
                       <div className="absolute inset-y-0 left-0 flex items-center pl-3 sm:pl-5">
                         <button
                           type="button"
+                          data-viewer-control
                           aria-label="View previous image"
                           disabled={!previousImage}
-                          onClick={() => previousImage && onActiveImageChange(previousImage.id)}
-                          className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full border border-white/14 bg-black/40 text-white shadow-lg transition hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed disabled:opacity-35"
+                          onClick={goToPreviousImage}
+                          className={cn(
+                            viewerButtonPointerClass,
+                            "pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full border border-white/14 bg-black/40 text-white shadow-lg transition hover:bg-black/60 disabled:cursor-not-allowed disabled:opacity-35",
+                          )}
                         >
                           <ChevronLeft className="h-6 w-6" />
                         </button>
@@ -469,10 +523,14 @@ export const ReaderImageViewer = ({
                       <div className="absolute inset-y-0 right-0 flex items-center pr-3 sm:pr-5 lg:pr-7">
                         <button
                           type="button"
+                          data-viewer-control
                           aria-label="View next image"
                           disabled={!nextImage}
-                          onClick={() => nextImage && onActiveImageChange(nextImage.id)}
-                          className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full border border-white/14 bg-black/40 text-white shadow-lg transition hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed disabled:opacity-35"
+                          onClick={goToNextImage}
+                          className={cn(
+                            viewerButtonPointerClass,
+                            "pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full border border-white/14 bg-black/40 text-white shadow-lg transition hover:bg-black/60 disabled:cursor-not-allowed disabled:opacity-35",
+                          )}
                         >
                           <ChevronRight className="h-6 w-6" />
                         </button>
@@ -508,7 +566,8 @@ export const ReaderImageViewer = ({
                               onActiveImageChange(image.id)
                             }}
                             className={cn(
-                              "group relative overflow-hidden rounded-2xl border bg-white/5 shadow-lg transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70",
+                              viewerButtonPointerClass,
+                              "group relative overflow-hidden rounded-2xl border bg-white/5 shadow-lg transition duration-200",
                               isCurrent
                                 ? "h-16 w-16 border-white/30 sm:h-[4.5rem] sm:w-[4.5rem] lg:h-20 lg:w-20"
                                 : "h-14 w-14 border-white/8 sm:h-16 sm:w-16 lg:h-[4.25rem] lg:w-[4.25rem] hover:scale-[1.02]",
@@ -517,7 +576,8 @@ export const ReaderImageViewer = ({
                             <img
                               src={image.image.url}
                               alt={image.message.content || "Image preview"}
-                              className="h-full w-full object-cover"
+                              draggable={false}
+                              className="h-full w-full select-none object-cover"
                             />
                             {!isCurrent ? (
                               <span
@@ -555,7 +615,10 @@ export const ReaderImageViewer = ({
                       type="button"
                       aria-label="Close image viewer"
                       onClick={onClose}
-                      className="flex h-14 w-14 items-center justify-center rounded-full border border-white/14 bg-black/45 text-white shadow-lg transition hover:bg-black/65 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                      className={cn(
+                        viewerButtonPointerClass,
+                        "flex h-14 w-14 items-center justify-center rounded-full border border-white/14 bg-black/45 text-white shadow-lg transition hover:bg-black/65",
+                      )}
                     >
                       <X className="h-6 w-6" />
                     </button>
@@ -564,7 +627,10 @@ export const ReaderImageViewer = ({
                         type="button"
                         aria-label="Open image in a new tab"
                         onClick={handleOpenImageInNewTab}
-                        className="flex h-11 w-11 items-center justify-center rounded-full border border-white/14 bg-black/45 text-white shadow-lg transition hover:bg-black/65 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                        className={cn(
+                          viewerButtonPointerClass,
+                          "flex h-11 w-11 items-center justify-center rounded-full border border-white/14 bg-black/45 text-white shadow-lg transition hover:bg-black/65",
+                        )}
                       >
                         <ExternalLink className="h-5 w-5" />
                       </button>
@@ -572,7 +638,10 @@ export const ReaderImageViewer = ({
                         type="button"
                         aria-label="Download image"
                         onClick={handleDownloadImage}
-                        className="flex h-11 w-11 items-center justify-center rounded-full border border-white/14 bg-black/45 text-white shadow-lg transition hover:bg-black/65 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                        className={cn(
+                          viewerButtonPointerClass,
+                          "flex h-11 w-11 items-center justify-center rounded-full border border-white/14 bg-black/45 text-white shadow-lg transition hover:bg-black/65",
+                        )}
                       >
                         <Download className="h-5 w-5" />
                       </button>
