@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { ImagePlus, Star, Trash2, X } from "lucide-react"
+import { Eye, ImagePlus, Star, Trash2, X } from "lucide-react"
 import type { ParticipantStatus } from "@/types/conversation"
 import { useConversationStore } from "@/store/conversationStore"
 import { Button } from "@/components/ui/button"
@@ -22,10 +22,12 @@ const emptyParticipant = {
 export const ParticipantManager = () => {
   const participants = useConversationStore((state) => state.conversation.participants)
   const activeParticipantId = useConversationStore((state) => state.activeParticipantId)
+  const viewParticipantId = useConversationStore((state) => state.viewParticipantId)
   const addParticipant = useConversationStore((state) => state.addParticipant)
   const updateParticipant = useConversationStore((state) => state.updateParticipant)
   const removeParticipant = useConversationStore((state) => state.removeParticipant)
   const setActiveParticipant = useConversationStore((state) => state.setActiveParticipant)
+  const setViewParticipant = useConversationStore((state) => state.setViewParticipant)
 
   const [draft, setDraft] = useState(emptyParticipant)
   const [error, setError] = useState<string | null>(null)
@@ -77,7 +79,7 @@ export const ParticipantManager = () => {
       <div>
         <h3 className="text-sm font-semibold text-[hsl(var(--foreground))]">Participants</h3>
         <p className="text-xs text-[hsl(var(--muted-foreground))]">
-          Manage contacts, avatars, and choose who is sending the next message.
+          Manage contacts, avatars, sender defaults, and preview perspective.
         </p>
       </div>
 
@@ -179,7 +181,7 @@ export const ParticipantManager = () => {
                   />
                 </div>
                 <div className="flex items-center justify-between rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-3 py-2">
-                  <span className="text-xs font-medium text-[hsl(var(--muted-foreground))]">Verified badge</span>
+                  <span className="text-xs font-medium text-[hsl(var(--muted-foreground))]">Verified</span>
                   <Switch
                     checked={Boolean(participant.isVerified)}
                     onCheckedChange={(value) => updateParticipant(participant.id, { isVerified: value })}
@@ -188,14 +190,26 @@ export const ParticipantManager = () => {
               </div>
 
               <div className="flex items-center gap-2">
-                <Button
-                  variant={activeParticipantId === participant.id ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setActiveParticipant(participant.id)}
-                >
-                  <Star className="h-4 w-4" />
-                  Active
-                </Button>
+                <div className="flex flex-col gap-2">
+                  <Button
+                    variant={activeParticipantId === participant.id ? "default" : "outline"}
+                    size="sm"
+                    className={activeParticipantId === participant.id ? "border border-transparent" : undefined}
+                    onClick={() => setActiveParticipant(participant.id)}
+                  >
+                    <Star className="h-4 w-4" />
+                    Active
+                  </Button>
+                  <Button
+                    variant={viewParticipantId === participant.id ? "default" : "outline"}
+                    size="sm"
+                    className={viewParticipantId === participant.id ? "border border-transparent" : undefined}
+                    onClick={() => setViewParticipant(participant.id)}
+                  >
+                    <Eye className="h-4 w-4" />
+                    View as
+                  </Button>
+                </div>
                 <Button variant="ghost" size="icon" onClick={() => removeParticipant(participant.id)}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -241,7 +255,7 @@ export const ParticipantManager = () => {
             </label>
           </Button>
           <div className="flex items-center gap-2 rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--secondary))] px-2 py-1">
-            <span className="text-xs text-[hsl(var(--muted-foreground))]">Verified</span>
+            <span className="text-xs text-[hsl(var(--muted-foreground))]">Verified badge</span>
             <Switch
               checked={Boolean(draft.isVerified)}
               onCheckedChange={(value) => setDraft((prev) => ({ ...prev, isVerified: value }))}

@@ -24,7 +24,7 @@ interface ConversationViewportProps {
   layout: LayoutConfig
   theme: LayoutTheme
   showChrome: boolean
-  activeParticipantId: string
+  viewParticipantId: string
   backgroundImageUrl: string
   backgroundImageOpacity: number
   backgroundColor: string
@@ -41,7 +41,7 @@ export const ConversationViewport = ({
   layout,
   theme,
   showChrome,
-  activeParticipantId,
+  viewParticipantId,
   backgroundImageUrl,
   backgroundImageOpacity,
   backgroundColor,
@@ -77,7 +77,7 @@ export const ConversationViewport = ({
         layout={layout}
         theme={theme}
         showChrome={showChrome}
-        activeParticipantId={activeParticipantId}
+        viewParticipantId={viewParticipantId}
         backgroundImageUrl={backgroundImageUrl}
         backgroundImageOpacity={backgroundImageOpacity}
         backgroundColor={backgroundColor}

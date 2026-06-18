@@ -49,6 +49,7 @@ const hasPersistedChange = (state: StoreState, prevState: StoreState) =>
   state.layoutId !== prevState.layoutId ||
   state.themeId !== prevState.themeId ||
   state.activeParticipantId !== prevState.activeParticipantId ||
+  state.viewParticipantId !== prevState.viewParticipantId ||
   state.backgroundImageUrl !== prevState.backgroundImageUrl ||
   state.backgroundImageOpacity !== prevState.backgroundImageOpacity ||
   state.backgroundColor !== prevState.backgroundColor ||
@@ -108,6 +109,8 @@ export const Toolbar = ({ onOpenReader }: ToolbarProps) => {
   const conversation = useConversationStore((state) => state.conversation)
   const layoutId = useConversationStore((state) => state.layoutId)
   const themeId = useConversationStore((state) => state.themeId)
+  const activeParticipantId = useConversationStore((state) => state.activeParticipantId)
+  const viewParticipantId = useConversationStore((state) => state.viewParticipantId)
   const backgroundImageUrl = useConversationStore((state) => state.backgroundImageUrl)
   const backgroundImageOpacity = useConversationStore((state) => state.backgroundImageOpacity)
   const backgroundColor = useConversationStore((state) => state.backgroundColor)
@@ -364,6 +367,8 @@ export const Toolbar = ({ onOpenReader }: ToolbarProps) => {
                             conversation,
                             layoutId,
                             themeId,
+                            activeParticipantId,
+                            viewParticipantId,
                             backgroundImageUrl,
                             backgroundImageOpacity,
                             backgroundColor,

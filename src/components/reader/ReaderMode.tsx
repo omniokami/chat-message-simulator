@@ -46,7 +46,7 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
   const layoutId = useConversationStore((state) => state.layoutId)
   const themeId = useConversationStore((state) => state.themeId)
   const editorTheme = useConversationStore((state) => state.editorTheme)
-  const activeParticipantId = useConversationStore((state) => state.activeParticipantId)
+  const viewParticipantId = useConversationStore((state) => state.viewParticipantId)
   const backgroundImageUrl = useConversationStore((state) => state.backgroundImageUrl)
   const backgroundImageOpacity = useConversationStore((state) => state.backgroundImageOpacity)
   const backgroundColor = useConversationStore((state) => state.backgroundColor)
@@ -124,6 +124,7 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
     visibleMessageCount,
     layout.id,
     theme.id,
+    viewParticipantId,
     ui.showChrome,
     backgroundImageUrl,
     backgroundColor,
@@ -294,7 +295,7 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
                 layout={layout}
                 theme={theme}
                 showChrome={ui.showChrome}
-                activeParticipantId={activeParticipantId}
+                viewParticipantId={viewParticipantId}
                 backgroundImageUrl={backgroundImageUrl}
                 backgroundImageOpacity={backgroundImageOpacity}
                 backgroundColor={backgroundColor}

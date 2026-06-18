@@ -27,6 +27,8 @@ export interface ConversationWithAppearance {
   conversation: Conversation
   layoutId: LayoutId
   themeId: ThemeId
+  activeParticipantId?: string
+  viewParticipantId?: string
   // Legacy JSON files may include the workspace theme, but imports should ignore it.
   editorTheme?: EditorTheme
   backgroundImageUrl: string
@@ -51,6 +53,7 @@ type Snapshot = {
   layoutId: LayoutId
   themeId: ThemeId
   activeParticipantId: string
+  viewParticipantId: string
   backgroundImageUrl: string
   backgroundImageOpacity: number
   backgroundColor: string
@@ -73,6 +76,7 @@ interface ConversationStore {
   themeId: ThemeId
   editorTheme: EditorTheme
   activeParticipantId: string
+  viewParticipantId: string
   backgroundImageUrl: string
   backgroundImageOpacity: number
   backgroundColor: string
@@ -85,6 +89,7 @@ interface ConversationStore {
   setTheme: (themeId: ThemeId) => void
   setEditorTheme: (theme: EditorTheme) => void
   setActiveParticipant: (participantId: string) => void
+  setViewParticipant: (participantId: string) => void
   setBackgroundImageUrl: (url: string) => void
   setBackgroundImageOpacity: (opacity: number) => void
   clearBackgroundImage: () => void
@@ -313,6 +318,13 @@ const normalizeConversationEditorState = (
     editorState?.preserveNaturalTime ?? defaultConversationEditorState.preserveNaturalTime,
 })
 
+const resolveParticipantId = (preferredId: string | undefined, participants: Participant[]) => {
+  if (preferredId && participants.some((participant) => participant.id === preferredId)) {
+    return preferredId
+  }
+  return participants[0]?.id ?? ""
+}
+
 const STORAGE_KEY = "chat-sim-storage"
 const HISTORY_LIMIT = 3
 
@@ -321,6 +333,7 @@ const buildSnapshot = (state: ConversationStore): Snapshot => ({
   layoutId: state.layoutId,
   themeId: state.themeId,
   activeParticipantId: state.activeParticipantId,
+  viewParticipantId: state.viewParticipantId,
   backgroundImageUrl: state.backgroundImageUrl,
   backgroundImageOpacity: state.backgroundImageOpacity,
   backgroundColor: state.backgroundColor,
@@ -344,6 +357,7 @@ export const useConversationStore = create<ConversationStore>()(
       themeId: "light",
       editorTheme: "dark",
       activeParticipantId: defaultParticipants[0].id,
+      viewParticipantId: defaultParticipants[0].id,
       backgroundImageUrl: "",
       backgroundImageOpacity: 0.35,
       backgroundColor: "",
@@ -357,6 +371,8 @@ export const useConversationStore = create<ConversationStore>()(
       setEditorTheme: (editorTheme) => set({ editorTheme }),
       setActiveParticipant: (participantId) =>
         set((state) => ({ activeParticipantId: participantId, history: pushHistory(state) })),
+      setViewParticipant: (participantId) =>
+        set((state) => ({ viewParticipantId: participantId, history: pushHistory(state) })),
       setBackgroundImageUrl: (url) =>
         set((state) => ({ backgroundImageUrl: url, history: pushHistory(state) })),
       setBackgroundImageOpacity: (opacity) =>
@@ -419,13 +435,18 @@ export const useConversationStore = create<ConversationStore>()(
             (participant) => participant.id !== participantId,
           )
           const activeParticipantId =
-            state.activeParticipantId === participantId && remaining.length
-              ? remaining[0].id
+            state.activeParticipantId === participantId
+              ? remaining[0]?.id ?? ""
               : state.activeParticipantId
+          const viewParticipantId =
+            state.viewParticipantId === participantId
+              ? remaining[0]?.id ?? ""
+              : state.viewParticipantId
           const groupName =
             remaining.length > 2 ? state.conversation.groupName ?? "Group Chat" : undefined
           return {
             activeParticipantId,
+            viewParticipantId,
             conversation: {
               ...state.conversation,
               participants: remaining,
@@ -627,6 +648,7 @@ export const useConversationStore = create<ConversationStore>()(
         set((state) => ({
           conversation: buildDefaultConversation(),
           activeParticipantId: defaultParticipants[0].id,
+          viewParticipantId: defaultParticipants[0].id,
           layoutId: defaultLayoutId,
           themeId: "light",
           editorTheme: state.editorTheme,
@@ -644,6 +666,14 @@ export const useConversationStore = create<ConversationStore>()(
         const participants = normalizeParticipants(conversation.participants)
         const groupName =
           participants.length > 2 ? conversation.groupName ?? legacyTitle ?? "Group Chat" : undefined
+        const activeParticipantId = resolveParticipantId(
+          appearance?.activeParticipantId,
+          participants,
+        )
+        const viewParticipantId = resolveParticipantId(
+          appearance?.viewParticipantId ?? appearance?.activeParticipantId,
+          participants,
+        )
         set((state) => ({
           conversation: {
             ...conversation,
@@ -651,7 +681,8 @@ export const useConversationStore = create<ConversationStore>()(
             groupName,
             editorState: normalizeConversationEditorState(conversation.editorState),
           },
-          activeParticipantId: participants[0]?.id ?? "",
+          activeParticipantId,
+          viewParticipantId,
           layoutId: appearance?.layoutId ?? state.layoutId,
           themeId: appearance?.themeId ?? state.themeId,
           backgroundImageUrl: appearance?.backgroundImageUrl ?? state.backgroundImageUrl,
@@ -670,6 +701,7 @@ export const useConversationStore = create<ConversationStore>()(
             layoutId: previous.layoutId,
             themeId: previous.themeId,
             activeParticipantId: previous.activeParticipantId,
+            viewParticipantId: previous.viewParticipantId,
             backgroundImageUrl: previous.backgroundImageUrl,
             backgroundImageOpacity: previous.backgroundImageOpacity,
             backgroundColor: previous.backgroundColor,
@@ -690,6 +722,7 @@ export const useConversationStore = create<ConversationStore>()(
             layoutId: next.layoutId,
             themeId: next.themeId,
             activeParticipantId: next.activeParticipantId,
+            viewParticipantId: next.viewParticipantId,
             backgroundImageUrl: next.backgroundImageUrl,
             backgroundImageOpacity: next.backgroundImageOpacity,
             backgroundColor: next.backgroundColor,
@@ -721,7 +754,7 @@ export const useConversationStore = create<ConversationStore>()(
     {
       name: STORAGE_KEY,
       storage: createIndexedDBStorage(),
-      version: 4,
+      version: 5,
       migrate: (persistedState: unknown): ConversationStore => {
         const state = persistedState as PersistedStoreState | null
         if (!state) {
@@ -732,6 +765,7 @@ export const useConversationStore = create<ConversationStore>()(
             themeId: "light",
             editorTheme: "dark",
             activeParticipantId: defaultParticipants[0].id,
+            viewParticipantId: defaultParticipants[0].id,
             backgroundImageUrl: "",
             backgroundImageOpacity: 0.35,
             backgroundColor: "",
@@ -742,16 +776,26 @@ export const useConversationStore = create<ConversationStore>()(
             lastAutosaveAt: null,
           } as unknown as ConversationStore
         }
+        const conversation = state.conversation ? {
+          ...state.conversation,
+          participants: normalizeParticipants(state.conversation.participants || []),
+          editorState: normalizeConversationEditorState(state.conversation.editorState),
+        } : buildDefaultConversation()
+        const activeParticipantId = resolveParticipantId(
+          state.activeParticipantId,
+          conversation.participants,
+        )
+        const viewParticipantId = resolveParticipantId(
+          state.viewParticipantId ?? state.activeParticipantId,
+          conversation.participants,
+        )
         return {
-          conversation: state.conversation ? {
-            ...state.conversation,
-            participants: normalizeParticipants(state.conversation.participants || []),
-            editorState: normalizeConversationEditorState(state.conversation.editorState),
-          } : buildDefaultConversation(),
+          conversation,
           layoutId: state.layoutId ?? defaultLayoutId,
           themeId: state.themeId ?? "light",
           editorTheme: state.editorTheme === "light" ? "light" : "dark",
-          activeParticipantId: state.activeParticipantId ?? defaultParticipants[0].id,
+          activeParticipantId,
+          viewParticipantId,
           backgroundImageUrl: state.backgroundImageUrl ?? "",
           backgroundImageOpacity: state.backgroundImageOpacity ?? 0.35,
           backgroundColor: state.backgroundColor ?? "",
@@ -771,6 +815,7 @@ export const useConversationStore = create<ConversationStore>()(
         themeId: state.themeId,
         editorTheme: state.editorTheme,
         activeParticipantId: state.activeParticipantId,
+        viewParticipantId: state.viewParticipantId,
         backgroundImageUrl: state.backgroundImageUrl,
         backgroundImageOpacity: state.backgroundImageOpacity,
         backgroundColor: state.backgroundColor,
