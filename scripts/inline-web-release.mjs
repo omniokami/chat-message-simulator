@@ -17,7 +17,6 @@ const escapeInlineStyle = (code) => code.replace(/<\/style/gi, '<\\/style')
 
 let html = readFileSync(indexPath, 'utf8')
 
-html = html.replace(/\s*<link\s+rel="icon"[^>]*>\r?\n?/gi, '')
 html = html.replace(/\s*<link\s+rel="modulepreload"[^>]*>\r?\n?/gi, '')
 
 html = html.replace(
@@ -33,4 +32,3 @@ html = html.replace(
 writeFileSync(indexPath, html)
 
 rmSync(resolve(distDir, 'assets'), { recursive: true, force: true })
-rmSync(resolve(distDir, 'vite.svg'), { force: true })
