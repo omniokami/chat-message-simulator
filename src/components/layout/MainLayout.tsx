@@ -708,7 +708,7 @@ export const MainLayout = () => {
                   <DialogHeader>
                     <DialogTitle>Terms and Conditions</DialogTitle>
                     <DialogDescription>By using this app, you agree to these terms.</DialogDescription>
-                    <div className="text-xs text-[hsl(var(--muted-foreground))]">Last updated: 2026-01-03 | Version: 2026-01-03</div>
+                    <div className="text-xs text-[hsl(var(--muted-foreground))]">Last updated: 2026-06-18 | Version: 2026-06-18</div>
                   </DialogHeader>
                   <div className="space-y-4 text-sm text-[hsl(var(--muted-foreground))]">
                     <div className="space-y-2">
@@ -716,8 +716,9 @@ export const MainLayout = () => {
                         What this app does
                       </div>
                       <p>
-                        This app lets you compose chat mockups, preview layouts, and export
-                        images. All processing happens in your browser.
+                        This app lets you compose chat mockups, preview layouts, review
+                        conversations, and export images. Most processing happens in your
+                        browser.
                       </p>
                     </div>
                     <div className="space-y-2">
@@ -725,15 +726,20 @@ export const MainLayout = () => {
                         Data handling and GDPR
                       </div>
                       <p>
-                        We do not collect, store, or process personal data on our servers. Your
-                        edits and autosaves stay in your browser&apos;s local storage. You can
-                        delete them using Clear or by clearing site data in your browser.
+                        This hosted fork does not run a backend for your chat content. Your
+                        edits, autosaves, and settings stay in browser storage, primarily
+                        IndexedDB. You can delete them using Reset project or by clearing site
+                        data in your browser.
                       </p>
                       <p>
-                        We do not run analytics or tracking cookies. Because your content does not
-                        leave your device, there is no server-side data controller or processor
-                        for your content. If you contact us, we will only use your email to
-                        respond.
+                        We do not run analytics or tracking cookies. Because your chat content
+                        normally stays on your device, this hosted fork does not perform
+                        server-side processing of that content. If you contact the project
+                        through GitHub, GitHub&apos;s own privacy terms apply to that interaction.
+                      </p>
+                      <p>
+                        If you open a sharing link, your browser fetches the referenced public
+                        JSON save file directly from GitHub or GitLab.
                       </p>
                     </div>
                     <div className="space-y-2">
@@ -755,6 +761,22 @@ export const MainLayout = () => {
                         You are responsible for the content you enter and export. Do not include
                         sensitive data unless you are comfortable storing it locally. Only use
                         content and assets you have the rights to use.
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="text-sm font-semibold text-[hsl(var(--foreground))]">
+                        Project origin and license
+                      </div>
+                      <p>
+                        This hosted app is a modified fork of the original
+                        quead/chat-message-simulator project. The source code is distributed
+                        under the Apache License 2.0; see the repository LICENSE file for the
+                        license terms and attribution details.
+                      </p>
+                      <p>
+                        Messaging app names and visual references are used descriptively. This
+                        project is not affiliated with or endorsed by WhatsApp, Apple, Snapchat,
+                        Meta, Instagram, Tinder, or their owners.
                       </p>
                     </div>
                     <div className="space-y-2">
@@ -781,18 +803,20 @@ export const MainLayout = () => {
                     </div>
                     <div className="space-y-2">
                       <div className="text-sm font-semibold text-[hsl(var(--foreground))]">
-                        Governing law
-                      </div>
-                      <p>
-                        These terms are governed by the laws of Romania. Any disputes are subject
-                        to the exclusive jurisdiction of the courts in Romania.
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="text-sm font-semibold text-[hsl(var(--foreground))]">
                         Contact
                       </div>
-                      <p>Questions about these terms or GDPR? Email: queadx@gmail.com</p>
+                      <p>
+                        Project questions can be opened on{" "}
+                        <a
+                          href="https://github.com/omniokami/chat-message-simulator/issues"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="underline underline-offset-2"
+                        >
+                          GitHub Issues
+                        </a>
+                        .
+                      </p>
                     </div>
                     <div className="space-y-2">
                       <div className="text-sm font-semibold text-[hsl(var(--foreground))]">
@@ -819,7 +843,7 @@ export const MainLayout = () => {
                     <DialogDescription>
                       This policy explains how data is handled in the app.
                     </DialogDescription>
-                    <div className="text-xs text-[hsl(var(--muted-foreground))]">Last updated: 2026-01-03 | Version: 2026-01-03</div>
+                    <div className="text-xs text-[hsl(var(--muted-foreground))]">Last updated: 2026-06-18 | Version: 2026-06-18</div>
                   </DialogHeader>
                   <div className="space-y-4 text-sm text-[hsl(var(--muted-foreground))]">
                     <div className="space-y-2">
@@ -827,18 +851,20 @@ export const MainLayout = () => {
                         Data we collect
                       </div>
                       <p>
-                        We do not collect or store your chat content on our servers. Everything
-                        you create stays on your device.
+                        This hosted fork does not collect or store your chat content on its own
+                        servers. Everything you create stays on your device unless you choose to
+                        export it, download it, upload it elsewhere, or open a public shared
+                        save file.
                       </p>
                     </div>
                     <div className="space-y-2">
                       <div className="text-sm font-semibold text-[hsl(var(--foreground))]">
-                        Local storage
+                        Browser storage
                       </div>
                       <p>
-                        The app uses your browser&apos;s local storage to keep autosaves and
-                        settings. You can remove this data with Clear or by clearing site data in
-                        your browser.
+                        The app uses browser storage, primarily IndexedDB, to keep autosaves and
+                        settings. You can remove this data with Reset project or by clearing site
+                        data in your browser.
                       </p>
                     </div>
                     <div className="space-y-2">
@@ -851,22 +877,38 @@ export const MainLayout = () => {
                         address and user agent. You can block or replace these resources if
                         needed.
                       </p>
+                      <p>
+                        Sharing links load public JSON save files directly from GitHub or GitLab
+                        in your browser.
+                      </p>
                     </div>
                     <div className="space-y-2">
                       <div className="text-sm font-semibold text-[hsl(var(--foreground))]">
                         GDPR readiness
                       </div>
                       <p>
-                        Because your content does not leave your device, there is no server-side
-                        processing of personal data for the app. If you contact us, we only use
-                        your email to respond and do not share it.
+                        Because your chat content normally stays on your device, this hosted fork
+                        does not perform server-side processing of that content. If you contact
+                        the project through GitHub, GitHub&apos;s own privacy terms apply to that
+                        interaction.
                       </p>
                     </div>
                     <div className="space-y-2">
                       <div className="text-sm font-semibold text-[hsl(var(--foreground))]">
                         Contact
                       </div>
-                      <p>Privacy questions? Email: queadx@gmail.com</p>
+                      <p>
+                        Privacy or project questions can be opened on{" "}
+                        <a
+                          href="https://github.com/omniokami/chat-message-simulator/issues"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="underline underline-offset-2"
+                        >
+                          GitHub Issues
+                        </a>
+                        .
+                      </p>
                     </div>
                     <div className="space-y-2">
                       <div className="text-sm font-semibold text-[hsl(var(--foreground))]">
