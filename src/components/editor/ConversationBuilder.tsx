@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import {
   DndContext,
   PointerSensor,
@@ -91,6 +91,11 @@ const MessageTypeBadge = ({ type }: { type: Message["type"] }) => {
 const MessageRow = ({
   message,
   sender,
+  nextSenderName,
+  canCycleSender,
+  senderCycleHighlightNonce,
+  senderCycleHighlightColor,
+  onCycleSender,
   onEdit,
   onGoToPreview,
   onDelete,
@@ -101,6 +106,11 @@ const MessageRow = ({
 }: {
   message: Message
   sender: Participant | undefined
+  nextSenderName?: string
+  canCycleSender: boolean
+  senderCycleHighlightNonce: number
+  senderCycleHighlightColor?: string
+  onCycleSender: () => void
   onEdit: () => void
   onGoToPreview?: () => void
   onDuplicate: () => void
@@ -118,6 +128,16 @@ const MessageRow = ({
 
   const isHidden = Boolean(message.isHidden)
   const avatarFallback = (sender?.name || "??").slice(0, 2).toUpperCase()
+  const senderName = sender?.name ?? "Unknown sender"
+  const avatarActionLabel =
+    canCycleSender && nextSenderName
+      ? `Change sender to ${nextSenderName}`
+      : "Add another participant to switch sender"
+  const avatarButtonStyle = {
+    "--sender-avatar-color": sender?.color ?? "hsl(var(--ring))",
+    "--sender-avatar-highlight-color":
+      senderCycleHighlightColor ?? sender?.color ?? "hsl(var(--ring))",
+  } as CSSProperties
   const style = {
     transform: CSS.Transform.toString(transform),
   }
@@ -155,31 +175,60 @@ const MessageRow = ({
       >
         <GripVertical className="h-4 w-4" />
       </Button>
-      {sender?.avatarUrl ? (
-        <img
-          src={sender.avatarUrl}
-          alt={sender.name || "Sender avatar"}
-          className="relative z-10 h-8 w-8 shrink-0 rounded-full border border-[hsl(var(--border))] object-cover"
-          loading="lazy"
-          decoding="async"
-        />
-      ) : (
-        <div
-          className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--muted))] text-[0.65rem] font-semibold text-[hsl(var(--muted-foreground))]"
-          title={sender?.name ?? "Unknown sender"}
-          style={
-            sender?.color
-              ? {
-                  backgroundColor: `color-mix(in srgb, ${sender.color} 18%, transparent)`,
-                  borderColor: `color-mix(in srgb, ${sender.color} 45%, hsl(var(--border)))`,
-                  color: sender.color,
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            className={cn(
+              "relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sender-avatar-color)] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(var(--background))]",
+              canCycleSender
+                ? "cursor-pointer hover:ring-2 hover:ring-[var(--sender-avatar-color)] hover:ring-offset-2 hover:ring-offset-[hsl(var(--background))]"
+                : "cursor-not-allowed opacity-60",
+              senderCycleHighlightNonce > 0 &&
+                "ring-2 ring-[var(--sender-avatar-highlight-color)] ring-offset-2 ring-offset-[hsl(var(--background))]",
+            )}
+            style={avatarButtonStyle}
+            onClick={onCycleSender}
+            disabled={!canCycleSender}
+            aria-label={avatarActionLabel}
+            title={senderName}
+          >
+            {senderCycleHighlightNonce > 0 ? (
+              <span
+                key={senderCycleHighlightNonce}
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 rounded-full border-2 border-[var(--sender-avatar-highlight-color)] animate-ping"
+              />
+            ) : null}
+            {sender?.avatarUrl ? (
+              <img
+                src={sender.avatarUrl}
+                alt=""
+                className="h-8 w-8 rounded-full border border-[hsl(var(--border))] object-cover"
+                loading="lazy"
+                decoding="async"
+              />
+            ) : (
+              <span
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--muted))] text-[0.65rem] font-semibold text-[hsl(var(--muted-foreground))]"
+                aria-hidden="true"
+                style={
+                  sender?.color
+                    ? {
+                        backgroundColor: `color-mix(in srgb, ${sender.color} 18%, transparent)`,
+                        borderColor: `color-mix(in srgb, ${sender.color} 45%, hsl(var(--border)))`,
+                        color: sender.color,
+                      }
+                    : undefined
                 }
-              : undefined
-          }
-        >
-          {avatarFallback}
-        </div>
-      )}
+              >
+                {avatarFallback}
+              </span>
+            )}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>{avatarActionLabel}</TooltipContent>
+      </Tooltip>
       <MessageTypeBadge type={message.type} />
       <div className="relative z-10 min-w-0 flex-1">
         <div
@@ -279,9 +328,15 @@ export const ConversationBuilder = ({
   const [easyError, setEasyError] = useState<string | null>(null)
   const [lastInteractedMessageId, setLastInteractedMessageId] = useState<string | null>(null)
   const [goToHighlightedMessageId, setGoToHighlightedMessageId] = useState<string | null>(null)
+  const [senderCycleHighlight, setSenderCycleHighlight] = useState<{
+    messageId: string
+    nonce: number
+    color?: string
+  } | null>(null)
   const [toast, setToast] = useState<{ message: string; tone: "success" | "error" } | null>(null)
   const toastTimerRef = useRef<number | null>(null)
   const goToHighlightTimerRef = useRef<number | null>(null)
+  const senderCycleHighlightTimerRef = useRef<number | null>(null)
   const messageListRef = useRef<HTMLDivElement | null>(null)
   const messageRowRefs = useRef(new Map<string, HTMLDivElement>())
 
@@ -318,6 +373,43 @@ export const ConversationBuilder = ({
     if (index === -1 || targetIndex < 0 || targetIndex >= messages.length) return
     setLastInteractedMessageId(messageId)
     setMessages(arrayMove(messages, index, targetIndex))
+  }
+
+  const getNextSender = (senderId: string) => {
+    if (participants.length === 0) return undefined
+    const currentIndex = participants.findIndex((participant) => participant.id === senderId)
+    const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % participants.length
+    return participants[nextIndex]
+  }
+
+  const triggerSenderCycleHighlight = (messageId: string, color?: string) => {
+    setSenderCycleHighlight((current) => ({
+      messageId,
+      nonce: (current?.nonce ?? 0) + 1,
+      color,
+    }))
+
+    if (senderCycleHighlightTimerRef.current) {
+      window.clearTimeout(senderCycleHighlightTimerRef.current)
+    }
+    senderCycleHighlightTimerRef.current = window.setTimeout(() => {
+      setSenderCycleHighlight((current) => (current?.messageId === messageId ? null : current))
+      senderCycleHighlightTimerRef.current = null
+    }, 650)
+  }
+
+  const cycleMessageSender = (messageId: string) => {
+    const message = messages.find((candidate) => candidate.id === messageId)
+    if (!message) return
+
+    const nextSender = getNextSender(message.senderId)
+    if (!nextSender || nextSender.id === message.senderId) return
+
+    setLastInteractedMessageId(messageId)
+    setEditingId(null)
+    setOpenActionsId(null)
+    triggerSenderCycleHighlight(messageId, nextSender.color)
+    updateMessage(messageId, { senderId: nextSender.id })
   }
 
   const normalizeNaturalTimeline = (sourceMessages: Message[], startIndex = 0) => {
@@ -454,6 +546,9 @@ export const ConversationBuilder = ({
       }
       if (goToHighlightTimerRef.current) {
         window.clearTimeout(goToHighlightTimerRef.current)
+      }
+      if (senderCycleHighlightTimerRef.current) {
+        window.clearTimeout(senderCycleHighlightTimerRef.current)
       }
     },
     [],
@@ -853,6 +948,7 @@ export const ConversationBuilder = ({
                       const canMoveUp = messages[0]?.id !== message.id
                       const canMoveDown = messages[messages.length - 1]?.id !== message.id
                       const isActionsOpen = openActionsId === message.id
+                      const nextSender = getNextSender(message.senderId)
                       return (
                         <div
                           key={message.id}
@@ -869,6 +965,19 @@ export const ConversationBuilder = ({
                           <MessageRow
                             message={message}
                             sender={participantsById.get(message.senderId)}
+                            nextSenderName={nextSender?.name}
+                            canCycleSender={participants.length > 1}
+                            senderCycleHighlightNonce={
+                              senderCycleHighlight?.messageId === message.id
+                                ? senderCycleHighlight.nonce
+                                : 0
+                            }
+                            senderCycleHighlightColor={
+                              senderCycleHighlight?.messageId === message.id
+                                ? senderCycleHighlight.color
+                                : undefined
+                            }
+                            onCycleSender={() => cycleMessageSender(message.id)}
                             isHighlighted={lastInteractedMessageId === message.id}
                             isGoToHighlighted={goToHighlightedMessageId === message.id}
                             onEdit={() => {
