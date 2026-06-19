@@ -514,6 +514,36 @@ export const ConversationBuilder = ({
     }, 1600)
   }, [])
 
+  const revealBuilderMessage = useCallback((messageId: string) => {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        const target = messageRowRefs.current.get(messageId)
+        const scrollRoot = messageListRef.current
+        if (!target || !scrollRoot) return
+
+        const padding = 12
+        const rootRect = scrollRoot.getBoundingClientRect()
+        const targetRect = target.getBoundingClientRect()
+        const maxTop = Math.max(0, scrollRoot.scrollHeight - scrollRoot.clientHeight)
+        const targetTop = scrollRoot.scrollTop + targetRect.top - rootRect.top
+        let nextTop = scrollRoot.scrollTop
+
+        if (targetRect.height > scrollRoot.clientHeight - padding * 2) {
+          nextTop = targetTop - padding
+        } else if (targetRect.bottom > rootRect.bottom - padding) {
+          nextTop += targetRect.bottom - rootRect.bottom + padding
+        } else if (targetRect.top < rootRect.top + padding) {
+          nextTop -= rootRect.top - targetRect.top + padding
+        }
+
+        nextTop = Math.min(Math.max(0, nextTop), maxTop)
+        if (Math.abs(nextTop - scrollRoot.scrollTop) > 1) {
+          animateElementScrollTop(scrollRoot, nextTop)
+        }
+      })
+    })
+  }, [])
+
   const scrollToBuilderMessage = useCallback(
     (messageId: string) => {
       setViewMode("standard")
@@ -985,6 +1015,7 @@ export const ConversationBuilder = ({
                               setEditingId(message.id)
                               setIsAdvancedOpen(false)
                               setOpenActionsId(null)
+                              revealBuilderMessage(message.id)
                             }}
                             onGoToPreview={
                               onGoToMessage
@@ -1012,7 +1043,10 @@ export const ConversationBuilder = ({
                             isActionsOpen={isActionsOpen}
                             onToggleActions={() => {
                               setLastInteractedMessageId(message.id)
-                              setOpenActionsId((current) => (current === message.id ? null : message.id))
+                              setOpenActionsId(isActionsOpen ? null : message.id)
+                              if (!isActionsOpen) {
+                                revealBuilderMessage(message.id)
+                              }
                             }}
                           />
                           {isActionsOpen ? (
@@ -1123,6 +1157,9 @@ export const ConversationBuilder = ({
                                 onToggleAdvanced={() => {
                                   setLastInteractedMessageId(message.id)
                                   setIsAdvancedOpen((prev) => !prev)
+                                  if (!isAdvancedOpen) {
+                                    revealBuilderMessage(message.id)
+                                  }
                                 }}
                                 onSubmit={(payload) => handleMessageSave(message.id, payload)}
                                 onCancel={() => {
