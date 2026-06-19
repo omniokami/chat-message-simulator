@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import {
   BookOpen,
   Download,
@@ -54,9 +54,6 @@ const buildDownloadName = (format: "png" | "jpeg", index?: number) => {
 
 const getSharedLoadErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : "Could not load the shared project."
-
-const BUILDER_STICKY_TOP = 16
-const BUILDER_VIEWPORT_HEIGHT = `calc(100dvh - ${BUILDER_STICKY_TOP * 2}px)`
 
 export const MainLayout = () => {
   const fullExportRef = useRef<HTMLDivElement | null>(null)
@@ -282,10 +279,6 @@ export const MainLayout = () => {
 
   const quickPresetIds = new Set(["iphone-14-pro", "ipad", "desktop"])
   const quickPresets: SizePreset[] = sizePresets.filter((preset) => quickPresetIds.has(preset.id))
-  const constrainBuilderSidebar = ui.activePanel === "messages"
-  const builderSidebarStyle: CSSProperties | undefined = constrainBuilderSidebar
-    ? { "--builder-sidebar-height": BUILDER_VIEWPORT_HEIGHT } as CSSProperties
-    : undefined
 
   return (
     <div
@@ -296,93 +289,92 @@ export const MainLayout = () => {
           : "bg-[radial-gradient(circle_at_top,_rgba(125,211,252,0.28),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(191,219,254,0.35),_transparent_28%),linear-gradient(180deg,#f8fbff_0%,#f8fafc_45%,#e8eef7_100%)]",
       )}
     >
-      <div className="workspace-stack mx-auto flex flex-col gap-6 px-4 pt-6 pb-24 lg:pb-6">
-        <Toolbar onOpenReader={() => setIsReaderOpen(true)} />
+      <div className="workspace-stack mx-auto flex flex-col gap-6 px-4 pt-6 pb-24 lg:grid lg:grid-cols-[minmax(420px,620px)_1fr] lg:items-start lg:pb-6">
+        <div className="min-w-0 space-y-6 lg:col-start-2 lg:row-start-1">
+          <Toolbar onOpenReader={() => setIsReaderOpen(true)} />
 
-        {sharedLoadStatus ? (
-          <div
-            role={sharedLoadStatus.type === "error" ? "alert" : "status"}
-            className={cn(
-              "rounded-xl border px-4 py-3 text-sm shadow-sm",
-              sharedLoadStatus.type === "error"
-                ? "border-red-500/30 bg-red-500/10 text-red-200"
-                : isEditorDark
-                  ? "border-sky-500/30 bg-sky-500/10 text-sky-100"
-                  : "border-sky-200 bg-sky-50 text-sky-950",
-            )}
-          >
-            {sharedLoadStatus.message}
-          </div>
-        ) : null}
-
-        <Card className="workspace-perf-contained">
-          <CardContent className="space-y-3 py-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
-                  Workflow
-                </div>
-                <div className="text-sm font-semibold text-[hsl(var(--foreground))]">
-                  Step {resolvedActivePanelIndex + 1} of {panelTabs.length}: {activePanel.label}
-                </div>
-                <p className="text-xs text-[hsl(var(--muted-foreground))]">{activePanel.description}</p>
-              </div>
+          {sharedLoadStatus ? (
+            <div
+              role={sharedLoadStatus.type === "error" ? "alert" : "status"}
+              className={cn(
+                "rounded-xl border px-4 py-3 text-sm shadow-sm",
+                sharedLoadStatus.type === "error"
+                  ? "border-red-500/30 bg-red-500/10 text-red-200"
+                  : isEditorDark
+                    ? "border-sky-500/30 bg-sky-500/10 text-sky-100"
+                    : "border-sky-200 bg-sky-50 text-sky-950",
+              )}
+            >
+              {sharedLoadStatus.message}
             </div>
-            <div className="grid gap-2 sm:grid-cols-4">
-              {panelTabs.map((tab) => {
-                const Icon = tab.icon
-                const isActive = ui.activePanel === tab.id
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() =>
-                      setUi({ activePanel: tab.id, activeView: "editor", isSidebarOpen: true })
-                    }
-                    className={cn(
-                      "flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left text-sm transition",
-                      isActive
-                        ? "border-[hsl(var(--primary))] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm"
-                        : "border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--strong-muted-foreground))] hover:border-[hsl(var(--control-border-hover))] hover:bg-[hsl(var(--accent))]",
-                    )}
-                  >
-                    <span
+          ) : null}
+
+          <Card className="workspace-perf-contained">
+            <CardContent className="space-y-3 py-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
+                    Workflow
+                  </div>
+                  <div className="text-sm font-semibold text-[hsl(var(--foreground))]">
+                    Step {resolvedActivePanelIndex + 1} of {panelTabs.length}: {activePanel.label}
+                  </div>
+                  <p className="text-xs text-[hsl(var(--muted-foreground))]">{activePanel.description}</p>
+                </div>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-4">
+                {panelTabs.map((tab) => {
+                  const Icon = tab.icon
+                  const isActive = ui.activePanel === tab.id
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() =>
+                        setUi({ activePanel: tab.id, activeView: "editor", isSidebarOpen: true })
+                      }
                       className={cn(
-                        "flex h-7 w-7 items-center justify-center rounded-lg text-xs font-semibold",
+                        "flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left text-sm transition",
                         isActive
-                          ? isEditorDark
-                            ? "bg-black/10 text-[hsl(var(--primary-foreground))]"
-                            : "bg-white/15 text-[hsl(var(--primary-foreground))]"
-                          : "bg-[hsl(var(--accent))] text-[hsl(var(--muted-foreground))]",
+                          ? "border-[hsl(var(--primary))] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm"
+                          : "border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--strong-muted-foreground))] hover:border-[hsl(var(--control-border-hover))] hover:bg-[hsl(var(--accent))]",
                       )}
                     >
-                      <Icon className="h-4 w-4" />
-                    </span>
-                    <span className="font-medium">{tab.label}</span>
-                  </button>
-                )
-              })}
-            </div>
-          </CardContent>
-        </Card>
+                      <span
+                        className={cn(
+                          "flex h-7 w-7 items-center justify-center rounded-lg text-xs font-semibold",
+                          isActive
+                            ? isEditorDark
+                              ? "bg-black/10 text-[hsl(var(--primary-foreground))]"
+                              : "bg-white/15 text-[hsl(var(--primary-foreground))]"
+                            : "bg-[hsl(var(--accent))] text-[hsl(var(--muted-foreground))]",
+                        )}
+                      >
+                        <Icon className="h-4 w-4" />
+                      </span>
+                      <span className="font-medium">{tab.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-        <div className="grid items-start gap-6 lg:grid-cols-[minmax(420px,620px)_1fr]">
+        <div className="contents">
           <aside
             className={cn(
-              "space-y-6",
+              "space-y-6 lg:sticky lg:top-6 lg:col-start-1 lg:row-start-1 lg:row-span-2 lg:self-start",
               ui.isSidebarOpen && ui.activeView !== "preview" ? "block" : "hidden",
-              ui.activePanel === "messages" && "lg:sticky lg:top-4 lg:self-start",
+              ui.activePanel === "messages" && "lg:h-[calc(100dvh-3rem)] lg:max-h-[calc(100dvh-3rem)]",
             )}
           >
             <Card
               className={cn(
                 "workspace-perf-contained",
                 ui.activePanel === "messages" &&
-                  "lg:flex lg:min-h-0 lg:flex-col lg:overflow-hidden",
-                constrainBuilderSidebar &&
-                  "lg:h-[var(--builder-sidebar-height)] lg:max-h-[var(--builder-sidebar-height)]",
+                  "lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:overflow-hidden",
               )}
-              style={builderSidebarStyle}
             >
               <CardContent
                 className={cn(
@@ -391,30 +383,37 @@ export const MainLayout = () => {
                     "lg:flex lg:min-h-0 lg:flex-1 lg:flex-col lg:overflow-hidden",
                 )}
               >
-                {ui.activePanel === "participants" ? <ParticipantManager /> : null}
-                {ui.activePanel === "messages" ? <ConversationBuilder /> : null}
-                {ui.activePanel === "settings" ? <SettingsPanel /> : null}
-                {ui.activePanel === "export" ? (
-                  <ExportPanel
-                    targetRef={
-                      exportSettings.captureMode === "full"
-                        ? fullExportRef
-                        : previewViewport.exportElementRef
-                    }
-                    getExportOffset={
-                      exportSettings.captureMode === "full"
-                        ? undefined
-                        : previewViewport.getViewportOffset
-                    }
-                    resolvedHeight={resolvedExportHeight}
-                    screenScrollTops={screenScrollTops}
-                  />
-                ) : null}
+                <div
+                  className={cn(
+                    "min-h-0",
+                    ui.activePanel === "messages" && "lg:flex lg:flex-1 lg:flex-col",
+                  )}
+                >
+                  {ui.activePanel === "participants" ? <ParticipantManager /> : null}
+                  {ui.activePanel === "messages" ? <ConversationBuilder /> : null}
+                  {ui.activePanel === "settings" ? <SettingsPanel /> : null}
+                  {ui.activePanel === "export" ? (
+                    <ExportPanel
+                      targetRef={
+                        exportSettings.captureMode === "full"
+                          ? fullExportRef
+                          : previewViewport.exportElementRef
+                      }
+                      getExportOffset={
+                        exportSettings.captureMode === "full"
+                          ? undefined
+                          : previewViewport.getViewportOffset
+                      }
+                      resolvedHeight={resolvedExportHeight}
+                      screenScrollTops={screenScrollTops}
+                    />
+                  ) : null}
+                </div>
               </CardContent>
             </Card>
           </aside>
 
-          <main className={cn("min-w-0 space-y-4", ui.activeView === "editor" && "hidden lg:block")}>
+          <main className={cn("min-w-0 space-y-4 lg:col-start-2 lg:row-start-2", ui.activeView === "editor" && "hidden lg:block")}>
             <Card className="workspace-perf-contained">
               <CardHeader className="space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">

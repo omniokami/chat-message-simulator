@@ -230,6 +230,7 @@ export const ConversationBuilder = () => {
   const [openActionsId, setOpenActionsId] = useState<string | null>(null)
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false)
   const [isAddOpen, setIsAddOpen] = useState(false)
+  const [areMessageOptionsOpen, setAreMessageOptionsOpen] = useState(true)
   const [viewMode, setViewMode] = useState<"standard" | "easy">("standard")
   const [easyInput, setEasyInput] = useState("")
   const [easyError, setEasyError] = useState<string | null>(null)
@@ -535,84 +536,116 @@ export const ConversationBuilder = () => {
   return (
     <TooltipProvider>
       <div className="flex min-h-0 flex-1 flex-col gap-4">
-        <div className="shrink-0">
-          <h3 className="text-sm font-semibold text-[hsl(var(--foreground))]">Conversation Builder</h3>
-          <p className="text-xs text-[hsl(var(--muted-foreground))]">
-            Add messages, drag to reorder, or switch to Easy mode for bulk edits.
-          </p>
+        <div className="flex shrink-0 items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold text-[hsl(var(--foreground))]">Conversation Builder</h3>
+            <p className="text-xs text-[hsl(var(--muted-foreground))]">
+              Add messages, drag to reorder, or switch to Easy mode for bulk edits.
+            </p>
+          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 shrink-0"
+                aria-controls="conversation-message-options"
+                aria-expanded={areMessageOptionsOpen}
+                onClick={() => setAreMessageOptionsOpen((prev) => !prev)}
+              >
+                {areMessageOptionsOpen ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+                <span className="sr-only">
+                  {areMessageOptionsOpen ? "Hide message options" : "Show message options"}
+                </span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {areMessageOptionsOpen ? "Hide message options" : "Show message options"}
+            </TooltipContent>
+          </Tooltip>
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col gap-2">
-          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">Messages</h4>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs text-[hsl(var(--muted-foreground))]">{messages.length} total</span>
-              <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Label className="text-[10px] uppercase text-[hsl(var(--muted-foreground))]">Global date/time</Label>
-                  <Input
-                    type="datetime-local"
-                    value={effectiveGlobalDateInput}
-                    onChange={(event) =>
-                      setConversationEditorState({ globalDateTime: event.target.value })
-                    }
-                    className="h-8 w-auto max-w-full text-xs"
-                    disabled={messages.length === 0}
-                  />
-                  <span className="text-xs text-[hsl(var(--muted-foreground))]">
-                    {hasMixedDates ? "Mixed date/time" : "Same date/time"}
-                  </span>
-                </div>
-                <div className="mt-2 flex justify-start">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-8"
-                    onClick={() => applyGlobalDateToAll(effectiveGlobalDateInput)}
-                    disabled={messages.length === 0 || !effectiveGlobalDateInput}
-                  >
-                    Apply global date/time
-                  </Button>
-                </div>
-                <div className="mt-2 flex items-center justify-between gap-3 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-3 py-2">
-                  <div className="space-y-0.5">
-                    <div className="text-xs font-medium text-[hsl(var(--foreground))]">Preserve natural time</div>
-                    <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
-                      Keeps the thread from moving backward in time. Turning this on also fixes the current conversation from top to bottom.
-                    </p>
+          {areMessageOptionsOpen ? (
+            <div
+              id="conversation-message-options"
+              className="flex shrink-0 flex-wrap items-center justify-between gap-2"
+            >
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">Messages</h4>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs text-[hsl(var(--muted-foreground))]">{messages.length} total</span>
+                <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Label className="text-[10px] uppercase text-[hsl(var(--muted-foreground))]">Global date/time</Label>
+                    <Input
+                      type="datetime-local"
+                      value={effectiveGlobalDateInput}
+                      onChange={(event) =>
+                        setConversationEditorState({ globalDateTime: event.target.value })
+                      }
+                      className="h-8 w-auto max-w-full text-xs"
+                      disabled={messages.length === 0}
+                    />
+                    <span className="text-xs text-[hsl(var(--muted-foreground))]">
+                      {hasMixedDates ? "Mixed date/time" : "Same date/time"}
+                    </span>
                   </div>
-                  <Switch
-                    checked={preserveNaturalTime}
-                    onCheckedChange={handlePreserveNaturalTimeChange}
-                    aria-label="Preserve natural time"
-                  />
+                  <div className="mt-2 flex justify-start">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8"
+                      onClick={() => applyGlobalDateToAll(effectiveGlobalDateInput)}
+                      disabled={messages.length === 0 || !effectiveGlobalDateInput}
+                    >
+                      Apply global date/time
+                    </Button>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between gap-3 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-3 py-2">
+                    <div className="space-y-0.5">
+                      <div className="text-xs font-medium text-[hsl(var(--foreground))]">Preserve natural time</div>
+                      <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
+                        Keeps the thread from moving backward in time. Turning this on also fixes the current conversation from top to bottom.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={preserveNaturalTime}
+                      onCheckedChange={handlePreserveNaturalTimeChange}
+                      aria-label="Preserve natural time"
+                    />
+                  </div>
                 </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    setMessages(messages.map((message) => ({ ...message, isHidden: true })))
+                  }
+                  disabled={!hasVisible}
+                >
+                  Hide all
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    setMessages(messages.map((message) => ({ ...message, isHidden: false })))
+                  }
+                  disabled={!hasHidden}
+                >
+                  Show all
+                </Button>
               </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() =>
-                  setMessages(messages.map((message) => ({ ...message, isHidden: true })))
-                }
-                disabled={!hasVisible}
-              >
-                Hide all
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() =>
-                  setMessages(messages.map((message) => ({ ...message, isHidden: false })))
-                }
-                disabled={!hasHidden}
-              >
-                Show all
-              </Button>
             </div>
-          </div>
+          ) : null}
           <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2">
             <div className="space-y-1">
               <div className="text-xs font-semibold uppercase text-[hsl(var(--muted-foreground))]">Editor view</div>
