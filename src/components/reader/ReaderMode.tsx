@@ -25,6 +25,12 @@ interface ReaderModeProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   hasLongConversation?: boolean
+  disableExit?: boolean
+  useDeviceViewport?: boolean
+  sharedLoadStatus?: {
+    type: "loading" | "error"
+    message: string
+  } | null
 }
 
 const READER_DEFAULT_ZOOM = 1
@@ -33,7 +39,60 @@ const READER_MAX_SCALE = Number.POSITIVE_INFINITY
 const READER_TOP_ACTION_BUTTON_CLASSNAME =
   "top-3 z-20 inline-flex h-9 w-9 items-center justify-center rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--card))]/95 p-0 text-[hsl(var(--foreground))] shadow-sm backdrop-blur hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))] [&_svg]:h-5 [&_svg]:w-5 [&_svg]:shrink-0"
 
-export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderModeProps) => {
+const getDeviceViewportSize = () => {
+  if (typeof window === "undefined") {
+    return { width: 390, height: 844 }
+  }
+
+  const viewport = window.visualViewport
+  const width = Math.round(viewport?.width ?? window.innerWidth)
+  const height = Math.round(viewport?.height ?? window.innerHeight)
+  return {
+    width: Math.max(1, width),
+    height: Math.max(1, height),
+  }
+}
+
+const useDeviceViewportSize = (enabled: boolean) => {
+  const [size, setSize] = useState(getDeviceViewportSize)
+
+  useEffect(() => {
+    if (!enabled || typeof window === "undefined") return
+
+    const updateSize = () => {
+      const nextSize = getDeviceViewportSize()
+      setSize((current) =>
+        current.width === nextSize.width && current.height === nextSize.height
+          ? current
+          : nextSize,
+      )
+    }
+
+    updateSize()
+    window.addEventListener("resize", updateSize)
+    window.addEventListener("orientationchange", updateSize)
+    window.visualViewport?.addEventListener("resize", updateSize)
+    window.visualViewport?.addEventListener("scroll", updateSize)
+
+    return () => {
+      window.removeEventListener("resize", updateSize)
+      window.removeEventListener("orientationchange", updateSize)
+      window.visualViewport?.removeEventListener("resize", updateSize)
+      window.visualViewport?.removeEventListener("scroll", updateSize)
+    }
+  }, [enabled])
+
+  return size
+}
+
+export const ReaderMode = ({
+  open,
+  onOpenChange,
+  hasLongConversation,
+  disableExit = false,
+  useDeviceViewport = false,
+  sharedLoadStatus,
+}: ReaderModeProps) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const wasOpenRef = useRef(open)
   const handledLoadScrollResetRef = useRef(0)
@@ -57,6 +116,9 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
   const setEditorTheme = useConversationStore((state) => state.setEditorTheme)
   const loadConversation = useConversationStore((state) => state.loadConversation)
   const isEditorDark = editorTheme === "dark"
+  const deviceViewportSize = useDeviceViewportSize(useDeviceViewport)
+  const readerWidth = useDeviceViewport ? deviceViewportSize.width : exportSettings.width
+  const readerHeight = useDeviceViewport ? deviceViewportSize.height : exportSettings.height
 
   useEffect(() => {
     if (!open) {
@@ -128,11 +190,13 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
     ui.showChrome,
     backgroundImageUrl,
     backgroundColor,
+    readerWidth,
+    readerHeight,
     open ? "open" : "closed",
   ].join(":")
   const readerViewport = useConversationViewport({
-    width: exportSettings.width,
-    height: exportSettings.height,
+    width: readerWidth,
+    height: readerHeight,
     zoom: readerZoom,
     autoFit: READER_AUTO_FIT,
     maxFitScale: READER_MAX_SCALE,
@@ -147,10 +211,17 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
   const shouldShowJumpControls = hasLongConversation ?? readerViewport.hasLongConversation
   const isOpening = open && !wasOpenRef.current
   const shouldRenderViewport = open && isViewportMounted && !isOpening
+  const scrollReaderConversation = readerViewport.scrollConversation
 
   const enterEditMode = () => {
+    if (disableExit) return
     setUi({ activeView: "editor", isSidebarOpen: true })
     onOpenChange(false)
+  }
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen && disableExit) return
+    onOpenChange(nextOpen)
   }
 
   useEffect(() => {
@@ -172,7 +243,7 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
     let secondFrame = 0
     const firstFrame = window.requestAnimationFrame(() => {
       secondFrame = window.requestAnimationFrame(() => {
-        readerViewport.scrollConversation("top", "auto")
+        scrollReaderConversation("top", "auto")
         handledLoadScrollResetRef.current = loadScrollResetToken
       })
     })
@@ -183,14 +254,15 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
         window.cancelAnimationFrame(secondFrame)
       }
     }
-  }, [loadScrollResetToken, open, readerViewport.scrollConversation, shouldRenderViewport])
+  }, [loadScrollResetToken, open, scrollReaderConversation, shouldRenderViewport])
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         className="inset-0 left-0 top-0 flex h-[100dvh] max-h-[100dvh] min-h-0 w-screen max-w-none translate-x-0 translate-y-0 flex-col overflow-hidden rounded-none border-0 bg-[hsl(var(--background))] p-0"
         overlayClassName="bg-transparent backdrop-blur-none"
         closeClassName={cn(READER_TOP_ACTION_BUTTON_CLASSNAME, "right-3")}
+        showCloseButton={!disableExit}
       >
         <DialogTitle className="sr-only">Reader mode</DialogTitle>
         <DialogDescription className="sr-only">
@@ -199,7 +271,11 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
         <Button
           variant="outline"
           size="icon"
-          className={cn("absolute right-14", READER_TOP_ACTION_BUTTON_CLASSNAME)}
+          className={cn(
+            "absolute",
+            disableExit ? "right-3" : "right-14",
+            READER_TOP_ACTION_BUTTON_CLASSNAME,
+          )}
           onClick={() => setIsHeaderVisible((visible) => !visible)}
           aria-label={isHeaderVisible ? "Hide reader toolbar" : "Show reader toolbar"}
         >
@@ -226,9 +302,10 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
                 <ConversationViewportStatus
                   appliedScale={readerViewport.appliedScale}
                   autoFit={READER_AUTO_FIT}
-                  width={exportSettings.width}
-                  height={exportSettings.height}
+                  width={readerWidth}
+                  height={readerHeight}
                   suffix={`${visibleMessageCount} visible messages`}
+                  sizeLabel={useDeviceViewport ? "Screen size" : undefined}
                 />
                 {loadError ? <div className="text-xs text-red-300">{loadError}</div> : null}
               </div>
@@ -240,18 +317,20 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
                   onToggleChrome={() => setUi({ showChrome: !ui.showChrome })}
                   onZoomChange={setReaderZoom}
                   onResetZoom={() => setReaderZoom(READER_DEFAULT_ZOOM)}
-                  onJump={readerViewport.scrollConversation}
+                  onJump={scrollReaderConversation}
                   modeActions={
                     <>
-                      <Button
-                        variant="default"
-                        size="sm"
-                        className="h-9 shrink-0"
-                        onClick={enterEditMode}
-                      >
-                        <PencilLine className="h-4 w-4" />
-                        <span className="hidden sm:inline">Edit mode</span>
-                      </Button>
+                      {!disableExit ? (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="h-9 shrink-0"
+                          onClick={enterEditMode}
+                        >
+                          <PencilLine className="h-4 w-4" />
+                          <span className="hidden sm:inline">Edit mode</span>
+                        </Button>
+                      ) : null}
                       <Button
                         variant="outline"
                         size="sm"
@@ -293,7 +372,25 @@ export const ReaderMode = ({ open, onOpenChange, hasLongConversation }: ReaderMo
             </header>
           </div>
           <main className="min-h-0 flex-1 overflow-hidden">
-            {shouldRenderViewport ? (
+            {sharedLoadStatus ? (
+              <div
+                role={sharedLoadStatus.type === "error" ? "alert" : "status"}
+                className="flex h-full items-center justify-center bg-[hsl(var(--background))] px-6 text-center"
+              >
+                <div
+                  className={cn(
+                    "max-w-sm rounded-2xl border px-4 py-3 text-sm shadow-sm",
+                    sharedLoadStatus.type === "error"
+                      ? "border-red-500/30 bg-red-500/10 text-red-200"
+                      : isEditorDark
+                        ? "border-sky-500/30 bg-sky-500/10 text-sky-100"
+                        : "border-sky-200 bg-sky-50 text-sky-950",
+                  )}
+                >
+                  {sharedLoadStatus.message}
+                </div>
+              </div>
+            ) : shouldRenderViewport ? (
               <ConversationViewport
                 viewport={readerViewport}
                 conversation={conversation}

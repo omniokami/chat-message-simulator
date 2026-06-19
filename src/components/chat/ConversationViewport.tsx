@@ -255,6 +255,7 @@ interface ConversationViewportStatusProps {
   width: number
   height: number
   suffix?: string
+  sizeLabel?: string
   className?: string
 }
 
@@ -264,6 +265,7 @@ export const ConversationViewportStatus = ({
   width,
   height,
   suffix,
+  sizeLabel = "Export size",
   className,
 }: ConversationViewportStatusProps) => (
   <div
@@ -277,7 +279,7 @@ export const ConversationViewportStatus = ({
       Zoom {Math.round(appliedScale * 100)}%{autoFit ? " (auto-fit)" : ""}
     </span>
     <span className="min-w-[9rem] shrink-0 tabular-nums">
-      - Export size {width} x {height}
+      - {sizeLabel} {width} x {height}
     </span>
     <span className={cn("min-w-[6.5rem] shrink-0", !suffix && "invisible")}>
       {suffix ? `- ${suffix}` : "- all messages"}

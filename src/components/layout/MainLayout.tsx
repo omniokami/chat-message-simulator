@@ -55,6 +55,11 @@ const buildDownloadName = (format: "png" | "jpeg", index?: number) => {
 const getSharedLoadErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : "Could not load the shared project."
 
+const MOBILE_READER_MEDIA_QUERY = "(max-width: 1023px)"
+
+const getIsMobileReaderForced = () =>
+  typeof window !== "undefined" && window.matchMedia(MOBILE_READER_MEDIA_QUERY).matches
+
 export const MainLayout = () => {
   const fullExportRef = useRef<HTMLDivElement | null>(null)
   const handledInitialSharingRef = useRef(false)
@@ -75,17 +80,25 @@ export const MainLayout = () => {
   const setExportSettings = useConversationStore((state) => state.setExportSettings)
   const setTheme = useConversationStore((state) => state.setTheme)
   const setEditorTheme = useConversationStore((state) => state.setEditorTheme)
+  const [initialSharingPayload] = useState(() =>
+    typeof window === "undefined" ? null : parseSharingLink(window.location.href),
+  )
+  const [isMobileReaderForced, setIsMobileReaderForced] = useState(getIsMobileReaderForced)
   const [isQuickExporting, setIsQuickExporting] = useState(false)
   const [quickPreviewUrls, setQuickPreviewUrls] = useState<string[]>([])
   const [quickPreviewError, setQuickPreviewError] = useState<string | null>(null)
   const [isQuickPreviewing, setIsQuickPreviewing] = useState(false)
   const [isQuickPreviewOpen, setIsQuickPreviewOpen] = useState(false)
-  const [isReaderOpen, setIsReaderOpen] = useState(false)
+  const [isReaderOpen, setIsReaderOpen] = useState(
+    () => getIsMobileReaderForced() || Boolean(initialSharingPayload?.openInReader),
+  )
   const [areBuilderMessageOptionsOpen, setAreBuilderMessageOptionsOpen] = useState(true)
   const [sharedLoadStatus, setSharedLoadStatus] = useState<{
     type: "loading" | "error"
     message: string
-  } | null>(null)
+  } | null>(() =>
+    initialSharingPayload ? { type: "loading", message: "Loading shared project..." } : null,
+  )
 
   const handleQuickExport = async (mode: "download" | "preview") => {
     const target =
@@ -196,16 +209,40 @@ export const MainLayout = () => {
 
   useEffect(() => {
     if (typeof window === "undefined") return
-    const isSmall = window.matchMedia("(max-width: 1023px)").matches
+    const isSmall = window.matchMedia(MOBILE_READER_MEDIA_QUERY).matches
     if (isSmall) {
       setUi({ activeView: "preview", isSidebarOpen: false })
     }
   }, [setUi])
 
   useEffect(() => {
+    if (typeof window === "undefined") return
+
+    const mediaQuery = window.matchMedia(MOBILE_READER_MEDIA_QUERY)
+    const syncForcedReader = () => {
+      const shouldForceReader = mediaQuery.matches
+      setIsMobileReaderForced((current) =>
+        current === shouldForceReader ? current : shouldForceReader,
+      )
+
+      if (shouldForceReader) {
+        setIsReaderOpen(true)
+        setUi({ activeView: "preview", isSidebarOpen: false })
+      }
+    }
+
+    syncForcedReader()
+    mediaQuery.addEventListener("change", syncForcedReader)
+
+    return () => {
+      mediaQuery.removeEventListener("change", syncForcedReader)
+    }
+  }, [setUi])
+
+  useEffect(() => {
     if (handledInitialSharingRef.current || typeof window === "undefined") return
 
-    const sharingPayload = parseSharingLink(window.location.href)
+    const sharingPayload = initialSharingPayload
     if (!sharingPayload) return
 
     handledInitialSharingRef.current = true
@@ -216,11 +253,13 @@ export const MainLayout = () => {
         const data = await fetchSharedConversation(sharingPayload.sourceUrl)
         loadConversationData(data, loadConversation)
         window.history.replaceState(null, "", getAppRootUrl())
-        if (sharingPayload.openInReader) {
-          setIsReaderOpen(true)
-        } else {
-          setUi({ activeView: "editor", isSidebarOpen: true })
-        }
+        const shouldOpenReader = getIsMobileReaderForced() || sharingPayload.openInReader
+        setIsReaderOpen(shouldOpenReader)
+        setUi(
+          shouldOpenReader
+            ? { activeView: "preview", isSidebarOpen: false }
+            : { activeView: "editor", isSidebarOpen: true },
+        )
         setSharedLoadStatus(null)
       } catch (error) {
         setSharedLoadStatus({
@@ -229,7 +268,7 @@ export const MainLayout = () => {
         })
       }
     })()
-  }, [loadConversation, setUi])
+  }, [initialSharingPayload, loadConversation, setUi])
 
   useEffect(() => {
     if (previousActivePanelRef.current !== ui.activePanel && (ui.activeView === "preview" || !ui.isSidebarOpen)) {
@@ -973,69 +1012,74 @@ export const MainLayout = () => {
         open={isReaderOpen}
         onOpenChange={setIsReaderOpen}
         hasLongConversation={previewViewport.hasLongConversation}
+        disableExit={isMobileReaderForced}
+        useDeviceViewport={isMobileReaderForced}
+        sharedLoadStatus={sharedLoadStatus}
       />
-      <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 lg:hidden">
-        <div
-          className={cn(
-            "rounded-[1.4rem] p-1 shadow-lg backdrop-blur",
-            isEditorDark
-              ? "border border-[hsl(var(--border))] bg-[hsl(var(--card))]/90"
-              : "border border-white/70 bg-white/90",
-          )}
-        >
+      {!isMobileReaderForced ? (
+        <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 lg:hidden">
           <div
-            role="tablist"
-            aria-label="Mobile view mode"
-            className="relative grid min-w-[188px] grid-cols-2 items-center"
+            className={cn(
+              "rounded-[1.4rem] p-1 shadow-lg backdrop-blur",
+              isEditorDark
+                ? "border border-[hsl(var(--border))] bg-[hsl(var(--card))]/90"
+                : "border border-white/70 bg-white/90",
+            )}
           >
             <div
-              aria-hidden="true"
-              className={cn(
-                "absolute inset-y-0 left-0 w-1/2 rounded-[1.1rem] bg-[hsl(var(--primary))] shadow-sm transition-transform duration-200 ease-out",
-                ui.activeView === "preview" && "translate-x-full",
-              )}
-            />
-            <button
-              type="button"
-              role="tab"
-              aria-selected={ui.activeView === "editor"}
-              className={cn(
-                "relative z-10 rounded-[1.1rem] px-5 py-2 text-sm font-semibold transition-colors",
-                ui.activeView === "editor"
-                  ? "text-[hsl(var(--primary-foreground))]"
-                  : "text-[hsl(var(--muted-foreground))]",
-              )}
-              onClick={() =>
-                setUi({
-                  activeView: "editor",
-                  isSidebarOpen: true,
-                })
-              }
+              role="tablist"
+              aria-label="Mobile view mode"
+              className="relative grid min-w-[188px] grid-cols-2 items-center"
             >
-              Edit
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={ui.activeView === "preview"}
-              className={cn(
-                "relative z-10 rounded-[1.1rem] px-5 py-2 text-sm font-semibold transition-colors",
-                ui.activeView === "preview"
-                  ? "text-[hsl(var(--primary-foreground))]"
-                  : "text-[hsl(var(--muted-foreground))]",
-              )}
-              onClick={() =>
-                setUi({
-                  activeView: "preview",
-                  isSidebarOpen: false,
-                })
-              }
-            >
-              Live
-            </button>
+              <div
+                aria-hidden="true"
+                className={cn(
+                  "absolute inset-y-0 left-0 w-1/2 rounded-[1.1rem] bg-[hsl(var(--primary))] shadow-sm transition-transform duration-200 ease-out",
+                  ui.activeView === "preview" && "translate-x-full",
+                )}
+              />
+              <button
+                type="button"
+                role="tab"
+                aria-selected={ui.activeView === "editor"}
+                className={cn(
+                  "relative z-10 rounded-[1.1rem] px-5 py-2 text-sm font-semibold transition-colors",
+                  ui.activeView === "editor"
+                    ? "text-[hsl(var(--primary-foreground))]"
+                    : "text-[hsl(var(--muted-foreground))]",
+                )}
+                onClick={() =>
+                  setUi({
+                    activeView: "editor",
+                    isSidebarOpen: true,
+                  })
+                }
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={ui.activeView === "preview"}
+                className={cn(
+                  "relative z-10 rounded-[1.1rem] px-5 py-2 text-sm font-semibold transition-colors",
+                  ui.activeView === "preview"
+                    ? "text-[hsl(var(--primary-foreground))]"
+                    : "text-[hsl(var(--muted-foreground))]",
+                )}
+                onClick={() =>
+                  setUi({
+                    activeView: "preview",
+                    isSidebarOpen: false,
+                  })
+                }
+              >
+                Live
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      ) : null}
     </div>
   )
 }
