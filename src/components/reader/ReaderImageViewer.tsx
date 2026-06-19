@@ -1,6 +1,8 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { format } from "date-fns"
 import {
+  ChevronFirst,
+  ChevronLast,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -32,7 +34,6 @@ import type { Participant } from "@/types/conversation"
 import type { Message, MessageImage } from "@/types/message"
 import { cn } from "@/utils/cn"
 
-const UI_HIDE_DELAY_MS = 2600
 const MAX_CAPTION_LENGTH = 100
 const OPEN_IN_NEW_TAB_OBJECT_URL_LIFETIME_MS = 60_000
 const MOBILE_IMAGE_VIEWER_MEDIA_QUERY = "(max-width: 1023px) and (pointer: coarse)"
@@ -176,7 +177,6 @@ export const ReaderImageViewer = ({
   const mobilePreviewScrollerRef = useRef<HTMLDivElement | null>(null)
   const mobileCurrentPreviewButtonRef = useRef<HTMLButtonElement | null>(null)
   const mobilePointerStartRef = useRef<{ x: number; y: number } | null>(null)
-  const hideUiTimeoutRef = useRef<number | null>(null)
   const mobileHistoryEntryIdRef = useRef<string | null>(null)
   const mobileFiltersHistoryEntryIdRef = useRef<string | null>(null)
   const isMobileImageViewer = useIsMobileImageViewer()
@@ -283,34 +283,16 @@ export const ReaderImageViewer = ({
     currentFilteredIndex >= 0 && currentFilteredIndex < filteredImages.length - 1
       ? filteredImages[currentFilteredIndex + 1]
       : undefined
-
-  const clearHideUiTimeout = useCallback(() => {
-    if (!hideUiTimeoutRef.current) return
-    window.clearTimeout(hideUiTimeoutRef.current)
-    hideUiTimeoutRef.current = null
-  }, [])
-
-  const scheduleUiHide = useCallback(() => {
-    clearHideUiTimeout()
-    hideUiTimeoutRef.current = window.setTimeout(() => {
-      setIsUiVisible(false)
-      hideUiTimeoutRef.current = null
-    }, UI_HIDE_DELAY_MS)
-  }, [clearHideUiTimeout])
+  const firstImage = filteredImages[0]
+  const lastImage = filteredImages.at(-1)
 
   const revealUi = useCallback(() => {
     setIsUiVisible(true)
-    if (!isMobileImageViewer) {
-      scheduleUiHide()
-    } else {
-      clearHideUiTimeout()
-    }
-  }, [clearHideUiTimeout, isMobileImageViewer, scheduleUiHide])
+  }, [])
 
   const toggleMobileUi = useCallback(() => {
-    clearHideUiTimeout()
     setIsUiVisible((visible) => !visible)
-  }, [clearHideUiTimeout])
+  }, [])
 
   const closeViewer = useCallback(() => {
     setIsMobileParticipantFiltersOpen(false)
@@ -336,6 +318,18 @@ export const ReaderImageViewer = ({
     revealUi()
     onActiveImageChange(nextImage.id)
   }, [nextImage, onActiveImageChange, revealUi])
+
+  const goToFirstImage = useCallback(() => {
+    if (!firstImage || !previewWindow.hasMoreOnLeft) return
+    revealUi()
+    onActiveImageChange(firstImage.id)
+  }, [firstImage, onActiveImageChange, previewWindow.hasMoreOnLeft, revealUi])
+
+  const goToLastImage = useCallback(() => {
+    if (!lastImage || !previewWindow.hasMoreOnRight) return
+    revealUi()
+    onActiveImageChange(lastImage.id)
+  }, [lastImage, onActiveImageChange, previewWindow.hasMoreOnRight, revealUi])
 
   const handleImageStageMouseDown = useCallback((event: ReactMouseEvent<HTMLDivElement>) => {
     if (event.button !== 0 || isViewerControlTarget(event.target)) return
@@ -422,29 +416,19 @@ export const ReaderImageViewer = ({
 
   useEffect(() => {
     if (!open) {
-      clearHideUiTimeout()
       return
     }
 
     if (!activeImage) {
       return closeViewerSoon()
     }
-  }, [activeImage, clearHideUiTimeout, closeViewerSoon, open])
+  }, [activeImage, closeViewerSoon, open])
 
   useEffect(() => {
-    if (!open || isMobileImageViewer) return
-
-    const handleWindowBlur = () => scheduleUiHide()
-    const handleWindowFocus = () => revealUi()
-
-    window.addEventListener("blur", handleWindowBlur)
-    window.addEventListener("focus", handleWindowFocus)
-
-    return () => {
-      window.removeEventListener("blur", handleWindowBlur)
-      window.removeEventListener("focus", handleWindowFocus)
+    if (open && !isMobileImageViewer) {
+      setIsUiVisible(true)
     }
-  }, [isMobileImageViewer, open, revealUi, scheduleUiHide])
+  }, [isMobileImageViewer, open])
 
   useEffect(() => {
     if (!open || !isMobileImageViewer || currentFilteredIndex < 0) return
@@ -619,13 +603,6 @@ export const ReaderImageViewer = ({
     open,
   ])
 
-  useEffect(
-    () => () => {
-      clearHideUiTimeout()
-    },
-    [clearHideUiTimeout],
-  )
-
   const handleParticipantToggle = (participantId: string, checked: boolean) => {
     revealUi()
 
@@ -725,9 +702,7 @@ export const ReaderImageViewer = ({
           }}
           onPointerMove={isMobileImageViewer ? undefined : revealUi}
           onPointerDown={isMobileImageViewer ? undefined : revealUi}
-          onPointerLeave={isMobileImageViewer ? undefined : scheduleUiHide}
           onFocusCapture={isMobileImageViewer ? undefined : revealUi}
-          onBlurCapture={isMobileImageViewer ? undefined : scheduleUiHide}
           onKeyDown={(event) => {
             if (event.key === "ArrowLeft" && previousImage) {
               event.preventDefault()
@@ -848,16 +823,20 @@ export const ReaderImageViewer = ({
                     >
                       <div className="pointer-events-auto mx-auto w-fit max-w-full overflow-x-auto hide-scrollbar rounded-[1.75rem] border border-white/10 bg-black/30 px-3 py-3 shadow-[0_20px_60px_rgba(0,0,0,0.28)] sm:px-4 lg:backdrop-blur-xl">
                         <div className="flex w-fit items-center justify-center gap-2 sm:gap-3">
-                          <span
-                            aria-label={
-                              previewWindow.hasMoreOnLeft
-                                ? "More images on the left"
-                                : "No more images on the left"
-                            }
-                            className="inline-flex h-10 w-8 shrink-0 items-center justify-center select-none text-center text-sm font-semibold tracking-[0.2em] text-white/55 sm:h-12 sm:w-10 sm:text-base"
+                          <button
+                            type="button"
+                            data-viewer-control
+                            aria-label="Go to first image"
+                            title="Go to first image"
+                            disabled={!previewWindow.hasMoreOnLeft}
+                            onClick={goToFirstImage}
+                            className={cn(
+                              viewerButtonPointerClass,
+                              "inline-flex h-10 w-8 shrink-0 items-center justify-center rounded-full text-white/70 transition hover:bg-white/10 hover:text-white disabled:cursor-default disabled:text-white/25 disabled:hover:bg-transparent sm:h-12 sm:w-10",
+                            )}
                           >
-                            {previewWindow.hasMoreOnLeft ? "..." : "|"}
-                          </span>
+                            <ChevronFirst className="h-5 w-5" />
+                          </button>
                           {previewWindow.images.map(({ image, isCurrent }) => (
                             <button
                               key={image.id}
@@ -893,16 +872,20 @@ export const ReaderImageViewer = ({
                               ) : null}
                             </button>
                           ))}
-                          <span
-                            aria-label={
-                              previewWindow.hasMoreOnRight
-                                ? "More images on the right"
-                                : "No more images on the right"
-                            }
-                            className="inline-flex h-10 w-8 shrink-0 items-center justify-center select-none text-center text-sm font-semibold tracking-[0.2em] text-white/55 sm:h-12 sm:w-10 sm:text-base"
+                          <button
+                            type="button"
+                            data-viewer-control
+                            aria-label="Go to last image"
+                            title="Go to last image"
+                            disabled={!previewWindow.hasMoreOnRight}
+                            onClick={goToLastImage}
+                            className={cn(
+                              viewerButtonPointerClass,
+                              "inline-flex h-10 w-8 shrink-0 items-center justify-center rounded-full text-white/70 transition hover:bg-white/10 hover:text-white disabled:cursor-default disabled:text-white/25 disabled:hover:bg-transparent sm:h-12 sm:w-10",
+                            )}
                           >
-                            {previewWindow.hasMoreOnRight ? "..." : "|"}
-                          </span>
+                            <ChevronLast className="h-5 w-5" />
+                          </button>
                         </div>
                       </div>
                     </div>
