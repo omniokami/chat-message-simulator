@@ -1,3 +1,4 @@
+import type { KeyboardEvent, MouseEvent, Ref } from "react"
 import type { Message } from "@/types/message"
 import type { Participant } from "@/types/conversation"
 import type { LayoutConfig } from "@/types/layout"
@@ -12,9 +13,21 @@ interface ConversationViewProps {
   selfId: string
   spoilerBlur: number
   mode?: "scroll" | "expanded"
-  containerRef?: React.Ref<HTMLDivElement>
-  contentRef?: React.Ref<HTMLDivElement>
+  containerRef?: Ref<HTMLDivElement>
+  contentRef?: Ref<HTMLDivElement>
   onImageActivate?: (message: Message, imageId?: string) => void
+  onMessageActivate?: (messageId: string) => void
+}
+
+const shouldIgnoreMessageActivation = (
+  target: EventTarget | null,
+  currentTarget: HTMLElement,
+) => {
+  if (!(target instanceof HTMLElement)) return false
+  const interactiveTarget = target.closest<HTMLElement>(
+    'button,a,input,textarea,select,[data-preview-message-action="true"]',
+  )
+  return Boolean(interactiveTarget && interactiveTarget !== currentTarget)
 }
 
 export const ConversationView = ({
@@ -27,6 +40,7 @@ export const ConversationView = ({
   containerRef,
   contentRef,
   onImageActivate,
+  onMessageActivate,
 }: ConversationViewProps) => {
   const visibleMessages = messages.filter((message) => !message.isHidden)
   const visibleYears = new Set(
@@ -69,6 +83,23 @@ export const ConversationView = ({
               ? "bg-transparent text-[var(--chat-muted)]"
         : "bg-white/15 text-[var(--chat-muted)]",
   )
+  const getMessageActivationProps = (messageId: string) =>
+    onMessageActivate
+      ? {
+          role: "button",
+          tabIndex: 0,
+          onClick: (event: MouseEvent<HTMLDivElement>) => {
+            if (shouldIgnoreMessageActivation(event.target, event.currentTarget)) return
+            onMessageActivate(messageId)
+          },
+          onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => {
+            if (event.key !== "Enter" && event.key !== " ") return
+            if (shouldIgnoreMessageActivation(event.target, event.currentTarget)) return
+            event.preventDefault()
+            onMessageActivate(messageId)
+          },
+        }
+      : {}
 
   return (
     <div
@@ -124,8 +155,13 @@ export const ConversationView = ({
             return (
               <div
                 key={message.id}
-                className="space-y-3"
+                className={cn(
+                  "space-y-3",
+                  onMessageActivate &&
+                    "cursor-pointer rounded-[18px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80",
+                )}
                 data-message-id={message.id}
+                {...getMessageActivationProps(message.id)}
               >
                 {showDate ? <div className={dateBadgeClass}>{currentDate}</div> : null}
                 <div className={systemMessageClass}>{message.content}</div>
@@ -136,8 +172,13 @@ export const ConversationView = ({
           return (
             <div
               key={message.id}
-              className={isWhatsApp ? "space-y-2" : "space-y-3"}
+              className={cn(
+                isWhatsApp ? "space-y-2" : "space-y-3",
+                onMessageActivate &&
+                  "cursor-pointer rounded-[18px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80",
+              )}
               data-message-id={message.id}
+              {...getMessageActivationProps(message.id)}
             >
               {showDate ? <div className={dateBadgeClass}>{currentDate}</div> : null}
               <MessageBubble

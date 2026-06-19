@@ -218,6 +218,7 @@ const MessageImageTile = ({
       data-image-spoiler={showSpoiler ? "true" : undefined}
       data-export-spoiler={showSpoiler ? String(shouldExportSpoiler) : undefined}
       data-spoiler-blur={showSpoiler ? spoilerBlur : undefined}
+      data-preview-message-action={isSpoilerCovered || canActivateImage ? "true" : undefined}
       onClick={() => {
         if (isSpoilerCovered) {
           onSpoilerRevealChange(imageKey, true)

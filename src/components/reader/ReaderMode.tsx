@@ -199,6 +199,7 @@ export const ReaderMode = ({
     height: readerHeight,
     zoom: readerZoom,
     autoFit: READER_AUTO_FIT,
+    scrollAnimation: "native",
     maxFitScale: READER_MAX_SCALE,
     maxAppliedScale: READER_MAX_SCALE,
     measurementKey,
@@ -206,6 +207,7 @@ export const ReaderMode = ({
   const imageViewer = useConversationImageViewer({
     conversation,
     exportElementRef: readerViewport.exportElementRef,
+    scrollAnimation: "native",
   })
   const closeImageViewer = imageViewer.closeImageViewer
   const shouldShowJumpControls = hasLongConversation ?? readerViewport.hasLongConversation

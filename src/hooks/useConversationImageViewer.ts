@@ -3,11 +3,13 @@ import type { ReaderImageEntry } from "@/components/reader/ReaderImageViewer"
 import type { Conversation } from "@/types/conversation"
 import type { Message } from "@/types/message"
 import { getMessageImages } from "@/utils/messageImages"
+import { animateElementIntoWindowView, animateElementScrollTop } from "@/utils/scrollAnimation"
 
 interface UseConversationImageViewerOptions {
   conversation: Conversation
   exportElementRef: RefObject<HTMLDivElement | null>
   pageScrollTargetRef?: RefObject<HTMLElement | null>
+  scrollAnimation?: "native" | "snappy"
 }
 
 const MESSAGE_GO_TO_HIGHLIGHT_CLASS = "chat-message-go-to-highlight"
@@ -33,6 +35,7 @@ export const useConversationImageViewer = ({
   conversation,
   exportElementRef,
   pageScrollTargetRef,
+  scrollAnimation = "snappy",
 }: UseConversationImageViewerOptions) => {
   const [activeImageId, setActiveImageId] = useState<string | null>(null)
   const [enabledParticipantIds, setEnabledParticipantIds] = useState<string[]>([])
@@ -177,26 +180,45 @@ export const useConversationImageViewer = ({
           scheduleHighlightAfterScroll(target)
           const scrollRoot = target.closest<HTMLElement>('[data-conversation-scroll-root="true"]')
           if (scrollRoot) {
-            scrollRoot.scrollTo({
-              top: getCenteredMessageScrollTop(scrollRoot, target),
-              behavior: "smooth",
-            })
+            const top = getCenteredMessageScrollTop(scrollRoot, target)
+            if (scrollAnimation === "native") {
+              scrollRoot.scrollTo({ top, behavior: "smooth" })
+            } else {
+              animateElementScrollTop(scrollRoot, top)
+            }
           } else {
-            target.scrollIntoView({
-              behavior: "smooth",
-              block: "center",
-              inline: "nearest",
-            })
+            if (scrollAnimation === "native") {
+              target.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+                inline: "nearest",
+              })
+            } else {
+              animateElementIntoWindowView(target)
+            }
           }
-          pageScrollTargetRef?.current?.scrollIntoView({
-            behavior: "smooth",
-            block: "center",
-            inline: "nearest",
-          })
+          const pageScrollTarget = pageScrollTargetRef?.current
+          if (pageScrollTarget) {
+            if (scrollAnimation === "native") {
+              pageScrollTarget.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+                inline: "nearest",
+              })
+            } else {
+              animateElementIntoWindowView(pageScrollTarget)
+            }
+          }
         })
       })
     },
-    [closeImageViewer, exportElementRef, pageScrollTargetRef, scheduleHighlightAfterScroll],
+    [
+      closeImageViewer,
+      exportElementRef,
+      pageScrollTargetRef,
+      scheduleHighlightAfterScroll,
+      scrollAnimation,
+    ],
   )
 
   return {

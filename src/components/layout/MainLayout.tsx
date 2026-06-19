@@ -63,6 +63,7 @@ const getIsMobileReaderForced = () =>
 export const MainLayout = () => {
   const fullExportRef = useRef<HTMLDivElement | null>(null)
   const handledInitialSharingRef = useRef(false)
+  const previewGoToRequestIdRef = useRef(0)
   const conversation = useConversationStore((state) => state.conversation)
   const layoutId = useConversationStore((state) => state.layoutId)
   const themeId = useConversationStore((state) => state.themeId)
@@ -93,6 +94,10 @@ export const MainLayout = () => {
     () => getIsMobileReaderForced() || Boolean(initialSharingPayload?.openInReader),
   )
   const [areBuilderMessageOptionsOpen, setAreBuilderMessageOptionsOpen] = useState(true)
+  const [previewGoToTarget, setPreviewGoToTarget] = useState<{
+    messageId: string
+    requestId: number
+  } | null>(null)
   const [sharedLoadStatus, setSharedLoadStatus] = useState<{
     type: "loading" | "error"
     message: string
@@ -200,6 +205,14 @@ export const MainLayout = () => {
       setUi({ activeView: "preview", isSidebarOpen: false })
     }
     previewImageViewer.scrollToMessage(messageId)
+  }
+  const handlePreviewMessageActivate = (messageId: string) => {
+    previewGoToRequestIdRef.current += 1
+    setPreviewGoToTarget({
+      messageId,
+      requestId: previewGoToRequestIdRef.current,
+    })
+    setUi({ activePanel: "messages", activeView: "editor", isSidebarOpen: true })
   }
 
   useEffect(() => {
@@ -444,6 +457,7 @@ export const MainLayout = () => {
                       areMessageOptionsOpen={areBuilderMessageOptionsOpen}
                       onMessageOptionsOpenChange={setAreBuilderMessageOptionsOpen}
                       onGoToMessage={handleGoToPreviewMessage}
+                      previewGoToTarget={previewGoToTarget}
                     />
                   ) : null}
                   {ui.activePanel === "settings" ? <SettingsPanel /> : null}
@@ -532,6 +546,7 @@ export const MainLayout = () => {
                   spoilerBlur={spoilerBlur}
                   className="h-[60vh] lg:h-[70vh]"
                   onImageActivate={previewImageViewer.openImageViewer}
+                  onMessageActivate={handlePreviewMessageActivate}
                 />
                 <ReaderImageViewer
                   open={Boolean(previewImageViewer.activeImageId)}

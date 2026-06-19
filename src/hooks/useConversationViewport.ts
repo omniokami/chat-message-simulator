@@ -9,6 +9,7 @@ import {
   type RefObject,
 } from "react"
 import { clamp } from "@/utils/helpers"
+import { animateElementScrollTop } from "@/utils/scrollAnimation"
 
 export interface ConversationViewportMetrics {
   contentHeight: number
@@ -22,6 +23,7 @@ interface UseConversationViewportOptions {
   height: number
   zoom: number
   autoFit: boolean
+  scrollAnimation?: "native" | "snappy"
   maxFitScale?: number
   maxAppliedScale?: number
   measurementKey?: string
@@ -58,6 +60,7 @@ export const useConversationViewport = ({
   height,
   zoom,
   autoFit,
+  scrollAnimation = "snappy",
   maxFitScale = 1,
   maxAppliedScale = 2,
   measurementKey,
@@ -260,11 +263,13 @@ export const useConversationViewport = ({
   ) => {
     const container = conversationContainerElementRef.current
     if (!container) return
-    container.scrollTo({
-      top: position === "top" ? 0 : container.scrollHeight,
-      behavior,
-    })
-  }, [])
+    const top = position === "top" ? 0 : container.scrollHeight
+    if (behavior === "smooth" && scrollAnimation === "snappy") {
+      animateElementScrollTop(container, top)
+      return
+    }
+    container.scrollTo({ top, behavior })
+  }, [scrollAnimation])
 
   return {
     containerRef,

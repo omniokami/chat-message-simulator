@@ -33,6 +33,7 @@ interface ConversationViewportProps {
   scrollClassName?: string
   fitToFrame?: boolean
   onImageActivate?: (message: Message, imageId?: string) => void
+  onMessageActivate?: (messageId: string) => void
 }
 
 export const ConversationViewport = ({
@@ -50,6 +51,7 @@ export const ConversationViewport = ({
   scrollClassName,
   fitToFrame = false,
   onImageActivate,
+  onMessageActivate,
 }: ConversationViewportProps) => {
   const {
     containerRef,
@@ -86,6 +88,7 @@ export const ConversationViewport = ({
         conversationContainerRef={conversationContainerRef}
         conversationContentRef={conversationContentRef}
         onImageActivate={onImageActivate}
+        onMessageActivate={onMessageActivate}
       />
     </div>
   )

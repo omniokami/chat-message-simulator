@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   DndContext,
   PointerSensor,
@@ -45,6 +45,7 @@ import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/utils/cn"
 import { formatTimestamp, generateId } from "@/utils/helpers"
+import { animateElementScrollTop } from "@/utils/scrollAnimation"
 
 const toDateTimeInputValue = (iso: string) => {
   const date = new Date(iso)
@@ -71,7 +72,7 @@ const MessageTypeBadge = ({ type }: { type: Message["type"] }) => {
   return (
     <span
       className={cn(
-        "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border",
+        "relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border",
         type === "image" &&
           "border-sky-400/35 bg-sky-400/10 text-sky-500 dark:text-sky-300",
         type === "system" &&
@@ -91,18 +92,22 @@ const MessageRow = ({
   message,
   sender,
   onEdit,
+  onGoToPreview,
   onDelete,
   isHighlighted,
+  isGoToHighlighted,
   isActionsOpen,
   onToggleActions,
 }: {
   message: Message
   sender: Participant | undefined
   onEdit: () => void
+  onGoToPreview?: () => void
   onDuplicate: () => void
   onDelete: () => void
   onToggleVisibility: () => void
   isHighlighted: boolean
+  isGoToHighlighted: boolean
   isActionsOpen: boolean
   onToggleActions: () => void
 }) => {
@@ -115,7 +120,6 @@ const MessageRow = ({
   const avatarFallback = (sender?.name || "??").slice(0, 2).toUpperCase()
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition: "none",
   }
 
   return (
@@ -123,17 +127,29 @@ const MessageRow = ({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "relative flex items-center gap-3 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 shadow-sm hover:bg-[hsl(var(--accent))] sm:pl-11",
+        "relative isolate flex items-center gap-3 overflow-hidden rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 shadow-sm hover:bg-[hsl(var(--accent)_/_0.45)] sm:pl-11",
         isHidden && "bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]",
-        isHighlighted &&
-          "border-amber-400/70 bg-amber-300/15 shadow-[0_0_0_1px_rgba(251,191,36,0.22)] hover:bg-amber-300/20",
         isDragging && "ring-2 ring-cyan-400/25",
       )}
     >
+      <span
+        aria-hidden="true"
+        className={cn(
+          "pointer-events-none absolute inset-0 z-0 rounded-[inherit] border border-amber-400/70 bg-amber-300/15 shadow-[0_0_0_1px_rgba(251,191,36,0.22)] transition-opacity duration-700 ease-out",
+          isHighlighted ? "opacity-100" : "opacity-0",
+        )}
+      />
+      <span
+        aria-hidden="true"
+        className={cn(
+          "pointer-events-none absolute inset-0 z-0 rounded-[inherit] border border-cyan-400/80 bg-cyan-300/15 shadow-[0_0_0_1px_rgba(34,211,238,0.3)] transition-opacity ease-out",
+          isGoToHighlighted ? "opacity-100 duration-150" : "opacity-0 duration-700",
+        )}
+      />
       <Button
         variant="ghost"
         size="icon"
-        className="absolute inset-y-0 left-0 hidden h-full w-8 cursor-grab rounded-l-xl rounded-r-none border-r border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] active:cursor-grabbing sm:inline-flex"
+        className="absolute inset-y-0 left-0 z-10 hidden h-full w-8 cursor-grab rounded-l-xl rounded-r-none border-r border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] active:cursor-grabbing sm:inline-flex"
         {...attributes}
         {...listeners}
       >
@@ -143,13 +159,13 @@ const MessageRow = ({
         <img
           src={sender.avatarUrl}
           alt={sender.name || "Sender avatar"}
-          className="h-8 w-8 shrink-0 rounded-full border border-[hsl(var(--border))] object-cover"
+          className="relative z-10 h-8 w-8 shrink-0 rounded-full border border-[hsl(var(--border))] object-cover"
           loading="lazy"
           decoding="async"
         />
       ) : (
         <div
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--muted))] text-[0.65rem] font-semibold text-[hsl(var(--muted-foreground))]"
+          className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--muted))] text-[0.65rem] font-semibold text-[hsl(var(--muted-foreground))]"
           title={sender?.name ?? "Unknown sender"}
           style={
             sender?.color
@@ -165,7 +181,7 @@ const MessageRow = ({
         </div>
       )}
       <MessageTypeBadge type={message.type} />
-      <div className="min-w-0 flex-1">
+      <div className="relative z-10 min-w-0 flex-1">
         <div
           className={cn(
             "text-sm font-medium break-words whitespace-normal sm:truncate",
@@ -179,11 +195,25 @@ const MessageRow = ({
           {message.type} - {formatTimestamp(message.timestamp)}
         </div>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="relative z-10 flex items-center gap-2">
         <Button variant="ghost" size="icon" onClick={onEdit}>
           <Pencil className="h-4 w-4" />
           <span className="sr-only">Edit</span>
         </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onGoToPreview}
+              disabled={!onGoToPreview || message.isHidden}
+            >
+              <LocateFixed className="h-4 w-4" />
+              <span className="sr-only">Go to preview</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Go to preview</TooltipContent>
+        </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon" className="hidden sm:inline-flex" onClick={onDelete}>
@@ -210,12 +240,14 @@ interface ConversationBuilderProps {
   areMessageOptionsOpen?: boolean
   onMessageOptionsOpenChange?: (isOpen: boolean) => void
   onGoToMessage?: (messageId: string) => void
+  previewGoToTarget?: { messageId: string; requestId: number } | null
 }
 
 export const ConversationBuilder = ({
   areMessageOptionsOpen: controlledAreMessageOptionsOpen,
   onMessageOptionsOpenChange,
   onGoToMessage,
+  previewGoToTarget,
 }: ConversationBuilderProps) => {
   const messages = useConversationStore((state) => state.conversation.messages)
   const participants = useConversationStore((state) => state.conversation.participants)
@@ -246,8 +278,12 @@ export const ConversationBuilder = ({
   const [easyInput, setEasyInput] = useState("")
   const [easyError, setEasyError] = useState<string | null>(null)
   const [lastInteractedMessageId, setLastInteractedMessageId] = useState<string | null>(null)
+  const [goToHighlightedMessageId, setGoToHighlightedMessageId] = useState<string | null>(null)
   const [toast, setToast] = useState<{ message: string; tone: "success" | "error" } | null>(null)
   const toastTimerRef = useRef<number | null>(null)
+  const goToHighlightTimerRef = useRef<number | null>(null)
+  const messageListRef = useRef<HTMLDivElement | null>(null)
+  const messageRowRefs = useRef(new Map<string, HTMLDivElement>())
 
   const { globalDate, hasMixedDates } = useMemo(() => {
     if (messages.length === 0) {
@@ -375,14 +411,61 @@ export const ConversationBuilder = ({
     }
   }
 
+  const highlightGoToMessage = useCallback((messageId: string) => {
+    setGoToHighlightedMessageId(messageId)
+    if (goToHighlightTimerRef.current) {
+      window.clearTimeout(goToHighlightTimerRef.current)
+    }
+    goToHighlightTimerRef.current = window.setTimeout(() => {
+      setGoToHighlightedMessageId((current) => (current === messageId ? null : current))
+      goToHighlightTimerRef.current = null
+    }, 1600)
+  }, [])
+
+  const scrollToBuilderMessage = useCallback(
+    (messageId: string) => {
+      setViewMode("standard")
+      setOpenActionsId(null)
+
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          const target = messageRowRefs.current.get(messageId)
+          const scrollRoot = messageListRef.current
+          if (!target || !scrollRoot) return
+
+          const rootRect = scrollRoot.getBoundingClientRect()
+          const targetRect = target.getBoundingClientRect()
+          const targetTop = scrollRoot.scrollTop + targetRect.top - rootRect.top
+          const centeredTop = targetTop - (scrollRoot.clientHeight - targetRect.height) / 2
+          const maxTop = Math.max(0, scrollRoot.scrollHeight - scrollRoot.clientHeight)
+
+          animateElementScrollTop(scrollRoot, Math.min(Math.max(0, centeredTop), maxTop))
+          highlightGoToMessage(messageId)
+        })
+      })
+    },
+    [highlightGoToMessage],
+  )
+
   useEffect(
     () => () => {
       if (toastTimerRef.current) {
         window.clearTimeout(toastTimerRef.current)
       }
+      if (goToHighlightTimerRef.current) {
+        window.clearTimeout(goToHighlightTimerRef.current)
+      }
     },
     [],
   )
+
+  useEffect(() => {
+    if (!previewGoToTarget) return
+    const frame = window.requestAnimationFrame(() => {
+      scrollToBuilderMessage(previewGoToTarget.messageId)
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [previewGoToTarget, scrollToBuilderMessage])
 
   const buildEasyText = () =>
     messages
@@ -736,6 +819,7 @@ export const ConversationBuilder = ({
             </div>
           ) : (
             <div
+              ref={messageListRef}
               className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 [scrollbar-gutter:stable]"
             >
               {messages.length === 0 ? (
@@ -770,17 +854,38 @@ export const ConversationBuilder = ({
                       const canMoveDown = messages[messages.length - 1]?.id !== message.id
                       const isActionsOpen = openActionsId === message.id
                       return (
-                        <div key={message.id} className="space-y-2">
+                        <div
+                          key={message.id}
+                          ref={(node) => {
+                            if (node) {
+                              messageRowRefs.current.set(message.id, node)
+                              return
+                            }
+                            messageRowRefs.current.delete(message.id)
+                          }}
+                          className="space-y-2"
+                          data-builder-message-id={message.id}
+                        >
                           <MessageRow
                             message={message}
                             sender={participantsById.get(message.senderId)}
                             isHighlighted={lastInteractedMessageId === message.id}
+                            isGoToHighlighted={goToHighlightedMessageId === message.id}
                             onEdit={() => {
                               setLastInteractedMessageId(message.id)
                               setEditingId(message.id)
                               setIsAdvancedOpen(false)
                               setOpenActionsId(null)
                             }}
+                            onGoToPreview={
+                              onGoToMessage
+                                ? () => {
+                                    setLastInteractedMessageId(message.id)
+                                    onGoToMessage(message.id)
+                                    setOpenActionsId(null)
+                                  }
+                                : undefined
+                            }
                             onToggleVisibility={() => {
                               setLastInteractedMessageId(message.id)
                               updateMessage(message.id, { isHidden: !message.isHidden })
@@ -881,19 +986,6 @@ export const ConversationBuilder = ({
                               >
                                 <ClockArrowDown className="h-4 w-4" />
                                 Sync all below
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setLastInteractedMessageId(message.id)
-                                  onGoToMessage?.(message.id)
-                                  setOpenActionsId(null)
-                                }}
-                                disabled={!onGoToMessage || message.isHidden}
-                              >
-                                <LocateFixed className="h-4 w-4" />
-                                Go to
                               </Button>
                               <Button
                                 variant="ghost"
