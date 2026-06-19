@@ -31,6 +31,7 @@ export interface ConversationViewportState {
   containerRef: RefCallback<HTMLDivElement>
   scrollRef: RefCallback<HTMLDivElement>
   exportRef: RefCallback<HTMLDivElement>
+  containerElementRef: RefObject<HTMLDivElement | null>
   exportElementRef: RefObject<HTMLDivElement | null>
   conversationContainerRef: RefCallback<HTMLDivElement>
   conversationContentRef: RefCallback<HTMLDivElement>
@@ -269,6 +270,7 @@ export const useConversationViewport = ({
     containerRef,
     scrollRef,
     exportRef,
+    containerElementRef,
     exportElementRef,
     conversationContainerRef,
     conversationContentRef,

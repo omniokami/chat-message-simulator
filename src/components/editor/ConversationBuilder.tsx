@@ -19,13 +19,14 @@ import {
   ArrowUp,
   ChevronDown,
   ChevronUp,
-  ClockArrowUp,
+  ClockArrowDown,
   Copy,
   Eye,
   EyeOff,
   GripVertical,
   Image as ImageIcon,
   Info,
+  LocateFixed,
   MessageSquareText,
   MoreHorizontal,
   Pencil,
@@ -205,7 +206,11 @@ const MessageRow = ({
   )
 }
 
-export const ConversationBuilder = () => {
+interface ConversationBuilderProps {
+  onGoToMessage?: (messageId: string) => void
+}
+
+export const ConversationBuilder = ({ onGoToMessage }: ConversationBuilderProps) => {
   const messages = useConversationStore((state) => state.conversation.messages)
   const participants = useConversationStore((state) => state.conversation.participants)
   const activeParticipantId = useConversationStore((state) => state.activeParticipantId)
@@ -837,17 +842,6 @@ export const ConversationBuilder = () => {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => {
-                                  setLastInteractedMessageId(message.id)
-                                  applyMessageTimeToNextMessages(message.id)
-                                }}
-                              >
-                                <ClockArrowUp className="h-4 w-4" />
-                                Time
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
                                   duplicateMessageStart(message.id)
                                   highlightCreatedMessage(messages)
                                   setOpenActionsId(null)
@@ -867,6 +861,30 @@ export const ConversationBuilder = () => {
                               >
                                 <DirectionalCopyIcon direction="down" />
                                 Dupe to end
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setLastInteractedMessageId(message.id)
+                                  applyMessageTimeToNextMessages(message.id)
+                                }}
+                              >
+                                <ClockArrowDown className="h-4 w-4" />
+                                Sync all below
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setLastInteractedMessageId(message.id)
+                                  onGoToMessage?.(message.id)
+                                  setOpenActionsId(null)
+                                }}
+                                disabled={!onGoToMessage || message.isHidden}
+                              >
+                                <LocateFixed className="h-4 w-4" />
+                                Go to
                               </Button>
                               <Button
                                 variant="ghost"

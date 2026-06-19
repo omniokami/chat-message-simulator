@@ -176,8 +176,17 @@ export const MainLayout = () => {
   const previewImageViewer = useConversationImageViewer({
     conversation,
     exportElementRef: previewViewport.exportElementRef,
+    pageScrollTargetRef: previewViewport.containerElementRef,
   })
   const conversationMetrics = previewViewport.metrics
+  const handleGoToPreviewMessage = (messageId: string) => {
+    const isSmallScreen =
+      typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches
+    if (isSmallScreen) {
+      setUi({ activeView: "preview", isSidebarOpen: false })
+    }
+    previewImageViewer.scrollToMessage(messageId)
+  }
 
   useEffect(() => {
     if (typeof document === "undefined") return
@@ -390,7 +399,9 @@ export const MainLayout = () => {
                   )}
                 >
                   {ui.activePanel === "participants" ? <ParticipantManager /> : null}
-                  {ui.activePanel === "messages" ? <ConversationBuilder /> : null}
+                  {ui.activePanel === "messages" ? (
+                    <ConversationBuilder onGoToMessage={handleGoToPreviewMessage} />
+                  ) : null}
                   {ui.activePanel === "settings" ? <SettingsPanel /> : null}
                   {ui.activePanel === "export" ? (
                     <ExportPanel
