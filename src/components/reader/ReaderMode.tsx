@@ -213,15 +213,18 @@ export const ReaderMode = ({
   const shouldRenderViewport = open && isViewportMounted && !isOpening
   const scrollReaderConversation = readerViewport.scrollConversation
 
-  const enterEditMode = () => {
-    if (disableExit) return
+  const exitReaderMode = () => {
     setUi({ activeView: "editor", isSidebarOpen: true })
     onOpenChange(false)
   }
 
   const handleOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen && disableExit) return
-    onOpenChange(nextOpen)
+    if (nextOpen) {
+      onOpenChange(true)
+      return
+    }
+    if (disableExit) return
+    exitReaderMode()
   }
 
   useEffect(() => {
@@ -325,7 +328,7 @@ export const ReaderMode = ({
                           variant="default"
                           size="sm"
                           className="h-9 shrink-0"
-                          onClick={enterEditMode}
+                          onClick={exitReaderMode}
                         >
                           <PencilLine className="h-4 w-4" />
                           <span className="hidden sm:inline">Edit mode</span>
