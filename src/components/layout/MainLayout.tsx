@@ -81,6 +81,7 @@ export const MainLayout = () => {
   const [isQuickPreviewing, setIsQuickPreviewing] = useState(false)
   const [isQuickPreviewOpen, setIsQuickPreviewOpen] = useState(false)
   const [isReaderOpen, setIsReaderOpen] = useState(false)
+  const [areBuilderMessageOptionsOpen, setAreBuilderMessageOptionsOpen] = useState(true)
   const [sharedLoadStatus, setSharedLoadStatus] = useState<{
     type: "loading" | "error"
     message: string
@@ -400,7 +401,11 @@ export const MainLayout = () => {
                 >
                   {ui.activePanel === "participants" ? <ParticipantManager /> : null}
                   {ui.activePanel === "messages" ? (
-                    <ConversationBuilder onGoToMessage={handleGoToPreviewMessage} />
+                    <ConversationBuilder
+                      areMessageOptionsOpen={areBuilderMessageOptionsOpen}
+                      onMessageOptionsOpenChange={setAreBuilderMessageOptionsOpen}
+                      onGoToMessage={handleGoToPreviewMessage}
+                    />
                   ) : null}
                   {ui.activePanel === "settings" ? <SettingsPanel /> : null}
                   {ui.activePanel === "export" ? (

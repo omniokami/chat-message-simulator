@@ -207,10 +207,16 @@ const MessageRow = ({
 }
 
 interface ConversationBuilderProps {
+  areMessageOptionsOpen?: boolean
+  onMessageOptionsOpenChange?: (isOpen: boolean) => void
   onGoToMessage?: (messageId: string) => void
 }
 
-export const ConversationBuilder = ({ onGoToMessage }: ConversationBuilderProps) => {
+export const ConversationBuilder = ({
+  areMessageOptionsOpen: controlledAreMessageOptionsOpen,
+  onMessageOptionsOpenChange,
+  onGoToMessage,
+}: ConversationBuilderProps) => {
   const messages = useConversationStore((state) => state.conversation.messages)
   const participants = useConversationStore((state) => state.conversation.participants)
   const activeParticipantId = useConversationStore((state) => state.activeParticipantId)
@@ -235,7 +241,7 @@ export const ConversationBuilder = ({ onGoToMessage }: ConversationBuilderProps)
   const [openActionsId, setOpenActionsId] = useState<string | null>(null)
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false)
   const [isAddOpen, setIsAddOpen] = useState(false)
-  const [areMessageOptionsOpen, setAreMessageOptionsOpen] = useState(true)
+  const [localAreMessageOptionsOpen, setLocalAreMessageOptionsOpen] = useState(true)
   const [viewMode, setViewMode] = useState<"standard" | "easy">("standard")
   const [easyInput, setEasyInput] = useState("")
   const [easyError, setEasyError] = useState<string | null>(null)
@@ -533,6 +539,9 @@ export const ConversationBuilder = ({ onGoToMessage }: ConversationBuilderProps)
 
   const hasHidden = messages.some((message) => message.isHidden)
   const hasVisible = messages.some((message) => !message.isHidden)
+  const areMessageOptionsOpen = controlledAreMessageOptionsOpen ?? localAreMessageOptionsOpen
+  const setAreMessageOptionsOpen =
+    onMessageOptionsOpenChange ?? setLocalAreMessageOptionsOpen
   const activeParticipant = participants.find((participant) => participant.id === activeParticipantId)
   const receiverParticipant = participants.find(
     (participant) => participant.id === resolveReceiverId(),
@@ -557,7 +566,7 @@ export const ConversationBuilder = ({ onGoToMessage }: ConversationBuilderProps)
                 className="h-9 w-9 shrink-0"
                 aria-controls="conversation-message-options"
                 aria-expanded={areMessageOptionsOpen}
-                onClick={() => setAreMessageOptionsOpen((prev) => !prev)}
+                onClick={() => setAreMessageOptionsOpen(!areMessageOptionsOpen)}
               >
                 {areMessageOptionsOpen ? (
                   <ChevronUp className="h-4 w-4" />
