@@ -15,9 +15,6 @@ This repo is a React + Vite app for building chat mockups and exporting them as 
   - First check `http://127.0.0.1:5173` or `http://localhost:5173`.
   - Use the user's running instance for browser/UI verification when it is reachable and appropriate.
 - Start a new dev server only when the default-port app is unavailable, stale, or verification specifically requires an agent-owned instance.
-- If an agent starts a dev server, record the URL in the response and shut that instance down after the implementation is verified.
-- For larger features or longer verification sessions, clean up agent-started dev servers once the feature is satisfactorily implemented to avoid hanging processes.
-- Ask before starting a server on a non-default port unless the user explicitly requested it.
 
 ## Key architecture
 - Global state: `src/store/conversationStore.ts` (Zustand + persistence).
