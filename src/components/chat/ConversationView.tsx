@@ -3,7 +3,11 @@ import type { Message } from "@/types/message"
 import type { Participant } from "@/types/conversation"
 import type { LayoutConfig } from "@/types/layout"
 import { MessageBubble } from "@/components/chat/MessageBubble"
-import { formatDateSeparator, formatInstagramDateSeparator } from "@/utils/helpers"
+import {
+  formatDateSeparator,
+  formatInstagramDateSeparator,
+  formatInstagramTimeSeparator,
+} from "@/utils/helpers"
 import { cn } from "@/utils/cn"
 
 interface ConversationViewProps {
@@ -55,6 +59,7 @@ export const ConversationView = ({
   const isInstagram = layout.id === "instagram"
   const isTinder = layout.id === "tinder"
   const isGroup = participants.length > 2
+  const instagramTimeGapThreshold = 30 * 60 * 1000
   const dateBadgeClass = cn(
     "mx-auto w-fit rounded-full px-2.5 py-0.5 text-[0.7rem]",
     isWhatsApp
@@ -138,13 +143,27 @@ export const ConversationView = ({
         ) : null}
         {visibleMessages.map((message, index) => {
           const sender = participants.find((participant) => participant.id === message.senderId)
-          const currentDate = isInstagram
-            ? formatInstagramDateSeparator(message.timestamp, instagramShowsYear)
-            : formatDateSeparator(message.timestamp)
           const currentDateKey = formatDateSeparator(message.timestamp)
+          const previousMessage = visibleMessages[index - 1]
           const previousDateKey =
-            index > 0 ? formatDateSeparator(visibleMessages[index - 1].timestamp) : ""
+            previousMessage ? formatDateSeparator(previousMessage.timestamp) : ""
           const showDate = currentDateKey !== previousDateKey
+          const currentDate = isInstagram
+            ? showDate
+              ? formatInstagramDateSeparator(message.timestamp, instagramShowsYear)
+              : formatInstagramTimeSeparator(message.timestamp)
+            : formatDateSeparator(message.timestamp)
+          const currentTime = new Date(message.timestamp).getTime()
+          const previousTime = previousMessage
+            ? new Date(previousMessage.timestamp).getTime()
+            : Number.NaN
+          const showInstagramTimeGap =
+            isInstagram &&
+            !showDate &&
+            Number.isFinite(currentTime) &&
+            Number.isFinite(previousTime) &&
+            Math.abs(currentTime - previousTime) > instagramTimeGapThreshold
+          const showSeparator = showDate || showInstagramTimeGap
           const isOwn = message.senderId === selfId
           const nextMessage = visibleMessages[index + 1]
           const isLastFromSender =
@@ -163,7 +182,7 @@ export const ConversationView = ({
                 data-message-id={message.id}
                 {...getMessageActivationProps(message.id)}
               >
-                {showDate ? <div className={dateBadgeClass}>{currentDate}</div> : null}
+                {showSeparator ? <div className={dateBadgeClass}>{currentDate}</div> : null}
                 <div className={systemMessageClass}>{message.content}</div>
               </div>
             )
@@ -180,7 +199,7 @@ export const ConversationView = ({
               data-message-id={message.id}
               {...getMessageActivationProps(message.id)}
             >
-              {showDate ? <div className={dateBadgeClass}>{currentDate}</div> : null}
+              {showSeparator ? <div className={dateBadgeClass}>{currentDate}</div> : null}
               <MessageBubble
                 message={message}
                 sender={sender}
