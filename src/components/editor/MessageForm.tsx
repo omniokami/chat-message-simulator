@@ -496,21 +496,18 @@ export const MessageForm = ({
         event.preventDefault()
         const submittedImages = type === "image" ? buildSubmittedImages() : []
         const primaryImage = submittedImages[0]
-        if (type === "image" && !primaryImage) {
-          setImageError("Please upload an image for this message.")
-          return
-        }
+        const submittedType: Message["type"] = type === "image" && !primaryImage ? "text" : type
         onSubmit({
           senderId,
           content,
-          images: type === "image" ? submittedImages : undefined,
+          images: submittedType === "image" ? submittedImages : undefined,
           imageUrl: primaryImage?.url,
           imageWidth: primaryImage?.width,
           imageHeight: primaryImage?.height,
           isSpoiler: primaryImage?.isSpoiler,
           exportSpoiler: primaryImage?.isSpoiler ? primaryImage.exportSpoiler : undefined,
           timestamp: fromInputValue(timestamp),
-          type,
+          type: submittedType,
           status,
         })
         if (resetOnSubmit && !initial) {
@@ -666,15 +663,7 @@ export const MessageForm = ({
       ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="submit"
-          disabled={type === "image" && !hasUploadedImages}
-          onClick={() => {
-            if (type === "image" && !hasUploadedImages) {
-              setImageError("Please upload an image for this message.")
-            }
-          }}
-        >
+        <Button type="submit">
           {submitLabel ?? (initial ? "Save changes" : "Add message")}
         </Button>
         {initial ? (

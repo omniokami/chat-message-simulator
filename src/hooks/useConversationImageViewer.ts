@@ -16,6 +16,57 @@ const MESSAGE_GO_TO_HIGHLIGHT_CLASS = "chat-message-go-to-highlight"
 const MESSAGE_GO_TO_HIGHLIGHT_DURATION = 1400
 const MESSAGE_GO_TO_SCROLL_SETTLE_DELAY = 140
 const MESSAGE_GO_TO_SCROLL_MAX_WAIT = 2400
+const PARTICIPANT_FILTER_STORAGE_PREFIX = "chat-sim-image-viewer-participant-filters"
+
+const getParticipantFilterStorageKey = (conversationId: string) =>
+  `${PARTICIPANT_FILTER_STORAGE_PREFIX}:${conversationId}`
+
+const readStoredParticipantFilterIds = (storageKey: string) => {
+  if (typeof window === "undefined") return null
+
+  try {
+    const value = window.sessionStorage.getItem(storageKey)
+    if (!value) return null
+
+    const parsed = JSON.parse(value)
+    if (!Array.isArray(parsed)) return null
+
+    return parsed.filter(
+      (participantId): participantId is string => typeof participantId === "string",
+    )
+  } catch {
+    return null
+  }
+}
+
+const writeStoredParticipantFilterIds = (storageKey: string, participantIds: string[]) => {
+  if (typeof window === "undefined") return
+
+  try {
+    if (participantIds.length === 0) {
+      window.sessionStorage.removeItem(storageKey)
+      return
+    }
+
+    window.sessionStorage.setItem(storageKey, JSON.stringify(participantIds))
+  } catch {
+    // Session persistence is a convenience; blocked storage should not break the viewer.
+  }
+}
+
+const resolveEnabledParticipantIds = (
+  participantIds: string[] | null,
+  imageParticipantIds: string[],
+) => {
+  if (imageParticipantIds.length === 0) return []
+  if (!participantIds?.length) return imageParticipantIds
+
+  const participantIdSet = new Set(participantIds)
+  const enabledIds = imageParticipantIds.filter((participantId) =>
+    participantIdSet.has(participantId),
+  )
+  return enabledIds.length > 0 ? enabledIds : imageParticipantIds
+}
 
 const getCenteredMessageScrollTop = (scrollRoot: HTMLElement, target: HTMLElement) => {
   const rootRect = scrollRoot.getBoundingClientRect()
@@ -38,9 +89,13 @@ export const useConversationImageViewer = ({
   scrollAnimation = "snappy",
 }: UseConversationImageViewerOptions) => {
   const [activeImageId, setActiveImageId] = useState<string | null>(null)
-  const [enabledParticipantIds, setEnabledParticipantIds] = useState<string[]>([])
+  const [enabledParticipantIds, setEnabledParticipantIdsState] = useState<string[]>([])
   const highlightTimeoutsRef = useRef(new Map<HTMLElement, number>())
   const pendingHighlightCleanupsRef = useRef(new Set<() => void>())
+  const participantFilterStorageKey = useMemo(
+    () => getParticipantFilterStorageKey(conversation.id),
+    [conversation.id],
+  )
 
   const images = useMemo<ReaderImageEntry[]>(
     () =>
@@ -70,6 +125,25 @@ export const useConversationImageViewer = ({
     [activeImageId, images],
   )
   const resolvedEnabledParticipantIds = resolvedActiveImageId ? enabledParticipantIds : []
+  const readEnabledParticipantIds = useCallback(
+    () =>
+      resolveEnabledParticipantIds(
+        readStoredParticipantFilterIds(participantFilterStorageKey),
+        imageParticipantIds,
+      ),
+    [imageParticipantIds, participantFilterStorageKey],
+  )
+  const setEnabledParticipantIds = useCallback(
+    (participantIds: string[]) => {
+      const nextParticipantIds = resolveEnabledParticipantIds(
+        participantIds,
+        imageParticipantIds,
+      )
+      writeStoredParticipantFilterIds(participantFilterStorageKey, nextParticipantIds)
+      setEnabledParticipantIdsState(nextParticipantIds)
+    },
+    [imageParticipantIds, participantFilterStorageKey],
+  )
 
   const openImageViewer = useCallback(
     (message: Message, imageId?: string) => {
@@ -78,15 +152,19 @@ export const useConversationImageViewer = ({
       const selectedImage =
         messageImages.find((image) => image.id === imageId) ?? messageImages[0]
       if (!selectedImage) return
-      setEnabledParticipantIds(imageParticipantIds)
+      const nextParticipantIds = resolveEnabledParticipantIds(
+        [...readEnabledParticipantIds(), message.senderId],
+        imageParticipantIds,
+      )
+      writeStoredParticipantFilterIds(participantFilterStorageKey, nextParticipantIds)
+      setEnabledParticipantIdsState(nextParticipantIds)
       setActiveImageId(`${message.id}:${selectedImage.id}`)
     },
-    [imageParticipantIds],
+    [imageParticipantIds, participantFilterStorageKey, readEnabledParticipantIds],
   )
 
   const closeImageViewer = useCallback(() => {
     setActiveImageId(null)
-    setEnabledParticipantIds([])
   }, [])
 
   const highlightMessageElement = useCallback((target: HTMLElement) => {
