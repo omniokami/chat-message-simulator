@@ -4,7 +4,7 @@
 
 ## 🌐 Live Demo
 
-**[Try it now at https://omniokami.github.io/chat-message-simulator/](https://omniokami.github.io/chat-message-simulator/)**
+**[Try it now at https://omniokami.github.io/omni-chats/](https://omniokami.github.io/omni-chats/)**
 
 ## 🙏 Credits
 
